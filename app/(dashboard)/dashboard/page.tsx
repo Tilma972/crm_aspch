@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/supabase/server";
-import { Home } from "lucide-react";
+import { Home, Building2 } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -21,6 +21,12 @@ export default function DashboardPage() {
           <Link href="/" className="inline-flex items-center">
             <Home className="mr-2 h-4 w-4" />
             Home
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/companies" className="inline-flex items-center">
+            <Building2 className="mr-2 h-4 w-4" />
+            Entreprises
           </Link>
         </Button>
       </div>
