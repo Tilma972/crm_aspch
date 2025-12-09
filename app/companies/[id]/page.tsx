@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/supabase/server";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Phone, Mail, FileText, Receipt, Plus, MapPin, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function CompanyDetailPage({
   params,
@@ -29,140 +35,154 @@ export default async function CompanyDetailPage({
     .order("created_at", { ascending: false });
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
-        {/* Header + retour */}
-        <header className="flex items-center justify-between">
-          <Link
-            href="/companies"
-            className="rounded-full border px-3 py-1 text-xs hover:bg-muted"
-          >
-            Retour
-          </Link>
-          <span className="text-xs text-muted-foreground">
-            {company.ville}
-          </span>
-        </header>
+    <main className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="flex items-center gap-4 p-4">
+          <Button variant="ghost" size="icon" asChild className="-ml-2">
+            <Link href="/companies">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="text-lg font-semibold">Fiche Entreprise</h1>
+        </div>
+      </header>
 
-        {/* Bloc principal */}
-        <section className="rounded-xl border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h1 className="text-lg font-semibold">{company.nom}</h1>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {company.adresse}
+      <div className="flex-1 overflow-y-auto pb-24">
+        <div className="p-4 space-y-6">
+          {/* Company Profile Header */}
+          <div className="flex items-start gap-4">
+            <Avatar className="h-20 w-20 rounded-xl border">
+              <AvatarImage src={`https://avatar.vercel.sh/${company.nom}.png`} alt={company.nom} />
+              <AvatarFallback className="rounded-xl text-lg bg-muted">{company.nom.substring(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-1 flex-1">
+              <h2 className="text-xl font-bold leading-tight">{company.nom}</h2>
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> {company.adresse}, {company.ville}
               </p>
+              <div className="flex gap-2 pt-1">
+                <Badge variant="secondary" className="bg-blue-900/30 text-blue-400 border-0">Prospect</Badge>
+                <Badge variant="outline" className="border-orange-500/50 text-orange-500">A relancer</Badge>
+              </div>
             </div>
-            <div className="flex flex-wrap justify-end gap-1">
-              {/* Tags based on qualifications? */}
-              {qualifications?.map(q => (
-                <span key={q.id} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                  {q.statut}
-                </span>
-              ))}
-            </div>
           </div>
 
-          {/* Actions principales */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {company.telephone && (
-              <a
-                href={`tel:${company.telephone}`}
-                className="flex-1 rounded-lg bg-primary px-3 py-2 text-center text-xs font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Appeler
-              </a>
-            )}
-            {company.email && (
-              <a
-                href={`mailto:${company.email}`}
-                className="flex-1 rounded-lg border px-3 py-2 text-center text-xs font-medium hover:bg-muted"
-              >
-                Email
-              </a>
-            )}
-          </div>
-        </section>
+          {/* Tabs */}
+          <Tabs defaultValue="infos" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="infos">Infos & Contact</TabsTrigger>
+              <TabsTrigger value="docs">Qualifications & Docs</TabsTrigger>
+            </TabsList>
 
-        {/* Coordonnées détaillées */}
-        <section className="rounded-xl border bg-card p-4 text-sm">
-          <h2 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-            Coordonnées
-          </h2>
-          <div className="space-y-1">
-            {company.telephone && (
-              <p>
-                <span className="font-medium">Téléphone :</span>{" "}
-                <a href={`tel:${company.telephone}`} className="underline">
-                  {company.telephone}
-                </a>
-              </p>
-            )}
-            {company.email && (
-              <p>
-                <span className="font-medium">Email :</span>{" "}
-                <a href={`mailto:${company.email}`} className="underline">
-                  {company.email}
-                </a>
-              </p>
-            )}
-            {company.adresse && (
-              <p>
-                <span className="font-medium">Adresse :</span> {company.adresse},{" "}
-                {company.ville}
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Qualifications / Historique */}
-        {qualifications && qualifications.length > 0 && (
-          <section className="rounded-xl border bg-card p-4 text-sm">
-            <h2 className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-              Qualifications 2026
-            </h2>
-            <div className="space-y-4">
-              {qualifications.map((qual) => (
-                <div key={qual.id} className="border-b pb-2 last:border-0 last:pb-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{qual.format_encart || "Format inconnu"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Parution : {qual.mois_parution || "Non défini"}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{qual.prix_total ? `${qual.prix_total}€` : "-"}</p>
-                      <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">
-                        {qual.statut}
-                      </span>
-                    </div>
+            <TabsContent value="infos" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Contact Principal</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-lg font-semibold">{company.contact_nom || "Non renseigné"}</p>
+                    <p className="text-sm text-muted-foreground">Directrice des Opérations (Placeholder)</p>
                   </div>
-                  {qual.commentaires && (
-                    <p className="mt-2 text-xs text-muted-foreground italic">
-                      "{qual.commentaires}"
-                    </p>
-                  )}
-                  {qual.date_contact && (
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      Contacté le : {qual.date_contact}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
-        {/* Lien retour liste */}
-        <footer className="mt-2 flex justify-center">
-          <Link
-            href="/companies"
-            className="text-xs text-muted-foreground underline underline-offset-4"
-          >
-            Revenir à la liste
-          </Link>
-        </footer>
+                  <div className="flex gap-2">
+                    {company.telephone && (
+                      <div className="flex-1 p-3 bg-secondary/50 rounded-lg flex items-center justify-between">
+                        <span className="text-sm font-medium">{company.telephone}</span>
+                        <Button size="icon" variant="secondary" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full" asChild>
+                          <a href={`tel:${company.telephone}`}><Phone className="h-4 w-4" /></a>
+                        </Button>
+                      </div>
+                    )}
+                    {company.email && (
+                      <div className="flex-1 p-3 bg-secondary/50 rounded-lg flex items-center justify-between">
+                        <span className="text-sm font-medium truncate max-w-[120px]">{company.email}</span>
+                        <Button size="icon" variant="secondary" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full" asChild>
+                          <a href={`mailto:${company.email}`}><Mail className="h-4 w-4" /></a>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Détails de l'entreprise</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between py-1 border-b border-border/50 last:border-0">
+                    <span className="text-muted-foreground">Secteur d'activité</span>
+                    <span className="font-medium">Technologie (Placeholder)</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-border/50 last:border-0">
+                    <span className="text-muted-foreground">Nombre d'employés</span>
+                    <span className="font-medium">42 (Placeholder)</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-border/50 last:border-0">
+                    <span className="text-muted-foreground">N° SIRET</span>
+                    <span className="font-medium">123 456 789 00012 (Placeholder)</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    La directrice a mentionné un besoin de formation incendie pour les nouveaux arrivants au T3. Planifier un rappel début juin. (Placeholder)
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="docs" className="space-y-4 mt-4">
+              {qualifications && qualifications.length > 0 ? (
+                qualifications.map((qual) => (
+                  <Card key={qual.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-semibold">Qualification 2026</p>
+                          <p className="text-sm text-muted-foreground">{qual.format_encart} - {qual.mois_parution}</p>
+                        </div>
+                        <Badge variant="outline">{qual.statut}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm mt-4">
+                        <span className="font-medium">{qual.prix_total}€</span>
+                        <span className="text-muted-foreground text-xs">{new Date(qual.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Aucune qualification pour le moment.
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Sticky Footer Actions */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t z-20">
+        <div className="max-w-md mx-auto flex flex-col gap-3">
+          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-12 text-base">
+            <Plus className="mr-2 h-5 w-5" /> Créer une qualification
+          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="secondary" className="w-full">
+              <FileText className="mr-2 h-4 w-4" /> Bon de commande
+            </Button>
+            <Button variant="secondary" className="w-full">
+              <Receipt className="mr-2 h-4 w-4" /> Facture
+            </Button>
+          </div>
+        </div>
       </div>
     </main>
   );
