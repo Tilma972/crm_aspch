@@ -478,7 +478,7 @@ Avant de valider cet objectif, confirme-moi :
 ## 📅 ROADMAP MVP - 6 SEMAINES
 
 ### **Sprint 1-2 : Fondations & Migration** (Semaines 1-2)
-- [ ] Setup Next.js 14 (App Router) + TypeScript
+- [ ] Setup Next.js 15 (App Router) + TypeScript
 - [ ] Setup Supabase (projet, connexion, RLS)
 - [ ] Setup Shadcn/UI + Tailwind
 - [ ] Authentification Supabase (login/logout/session)
@@ -554,7 +554,7 @@ Avant de valider cet objectif, confirme-moi :
 4. **Realtime** : Supabase Realtime pour updates UI automatiques
 
 ### **Stack Technique**
-- **Frontend** : Next.js 14 (App Router), React Server Components, Shadcn/UI, Tailwind
+- **Frontend** : Next.js 15 (App Router), React Server Components, Shadcn/UI, Tailwind
 - **Backend** : Supabase (Postgres + Auth + Realtime + Storage)
 - **Workflows** : n8n (génération PDF, IA, emails)
 - **IA** : Claude 3.5 Haiku OU Gemini Flash 2.0

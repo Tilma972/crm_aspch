@@ -18,7 +18,7 @@
 └────────────────────────────────────────────────────────────────┘
                             ↓ HTTPS
 ┌────────────────────────────────────────────────────────────────┐
-│  VERCEL (Next.js 14 App Router)                                │
+│  VERCEL (Next.js 15 App Router)                                │
 │  ─────────────────────────────────────────────────────────────│
 │  • Pages React (SSR + Client Components)                       │
 │  • API Routes (/api/webhooks/*)                                │
@@ -165,6 +165,74 @@ CREATE TRIGGER update_qualification_updated_at
 - `bc_status = 'generating'` → CRM affiche spinner
 - `bc_status = 'ready'` → CRM affiche bouton "Voir BC"
 - `bc_status = 'error'` → CRM affiche message erreur + bouton "Réessayer"
+
+---
+
+### **💡 Alternative Senior : Table `document` Normalisée**
+
+**Contexte** : Le schéma actuel (3 groupes de colonnes `bc_*`, `facture_*`, `bat_*`) est acceptable pour MVP mais peut devenir verbeux si vous ajoutez plus de types de documents.
+
+**Alternative scalable** (Phase 2 si besoin) :
+
+```sql
+CREATE TABLE document (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  qualification_id UUID NOT NULL REFERENCES qualification(id) ON DELETE CASCADE,
+
+  -- Type de document
+  type TEXT NOT NULL CHECK (type IN ('bc', 'facture', 'bat', 'relance', 'devis')),
+
+  -- État & données
+  status TEXT CHECK (status IN ('generating', 'ready', 'error')),
+  url TEXT,
+  numero TEXT,  -- Numéro facture, BC, etc.
+  error TEXT,
+
+  -- Metadata
+  generated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+
+  -- Un seul document de chaque type par qualification
+  UNIQUE(qualification_id, type)
+);
+
+CREATE INDEX idx_document_qualification ON document(qualification_id);
+CREATE INDEX idx_document_type ON document(type);
+```
+
+**Avantages** :
+- ✅ **Scalable** : Nouveau type de document = `INSERT`, pas `ALTER TABLE`
+- ✅ **Queries propres** : `SELECT * FROM document WHERE qualification_id = ? AND type = 'bc'`
+- ✅ **Moins de NULL** : Pas de colonnes vides dans `qualification`
+
+**Inconvénients** :
+- ⚠️ **JOIN supplémentaire** : Chaque query qualification nécessite un `LEFT JOIN document`
+- ⚠️ **Complexité accrue** : Plus de tables à gérer
+
+**Recommandation** :
+- **MVP** : Garder colonnes `bc_*`, `facture_*`, `bat_*` dans `qualification` (simple, rapide)
+- **Phase 2** : Migrer vers table `document` si vous ajoutez 4-5 types de documents supplémentaires
+
+**Migration future** (si besoin) :
+```sql
+-- Migrer données existantes
+INSERT INTO document (qualification_id, type, status, url, generated_at)
+SELECT
+  id,
+  'bc',
+  bc_status,
+  bc_url,
+  bc_generated_at
+FROM qualification
+WHERE bc_url IS NOT NULL;
+
+-- Supprimer anciennes colonnes
+ALTER TABLE qualification
+  DROP COLUMN bc_status,
+  DROP COLUMN bc_url,
+  DROP COLUMN bc_generated_at,
+  DROP COLUMN bc_error;
+```
 
 ---
 
@@ -443,6 +511,20 @@ Content-Type: application/json
 ### **2. Webhook : `email-draft`**
 
 **Objectif** : Générer draft email avec IA contextuelle
+
+💡 **Alternative rapide (Phase 1.5)** : Si vous voulez livrer MVP plus vite, utilisez des **templates statiques Markdown** :
+```typescript
+// lib/email-templates/relance-paiement.md
+Bonjour {{entreprise.nom}},
+
+Suite à notre échange concernant votre participation au Calendrier 2026 ({{format}} - {{prix}}€), nous n'avons pas encore reçu votre règlement.
+
+Pourriez-vous nous confirmer la date de paiement ?
+
+Cordialement,
+Sapeurs-Pompiers de Clermont-l'Hérault
+```
+Puis remplacer placeholders côté CRM. L'IA peut être ajoutée Phase 2 sans changer l'API.
 
 #### **Request**
 
@@ -1038,12 +1120,13 @@ export class N8nClient {
 export const n8n = new N8nClient()
 ```
 
-### **Usage dans API Route**
+### **Usage dans API Route (Pattern Fire & Forget)**
+
+⚠️ **IMPORTANT** : Les webhooks n8n sont **asynchrones**. Ne pas `await` la réponse n8n !
 
 ```typescript
 // app/api/webhooks/generate-bc/route.ts
 import { createClient } from '@/lib/supabase/server'
-import { n8n } from '@/lib/n8n/client'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -1056,15 +1139,21 @@ export async function POST(request: Request) {
     .eq('id', qualification_id)
     .single()
 
-  // 2. Update statut "generating"
+  if (!qualification) {
+    return Response.json({ error: 'Qualification not found' }, { status: 404 })
+  }
+
+  // 2. Update statut "generating" IMMÉDIATEMENT
   await supabase
     .from('qualification')
     .update({ bc_status: 'generating' })
     .eq('id', qualification_id)
 
-  try {
-    // 3. Appeler n8n (async)
-    await n8n.generateBC({
+  // 3. Trigger n8n en FIRE & FORGET (pas d'await !)
+  fetch(process.env.N8N_WEBHOOK_BASE_URL + '/generate-bc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       qualification_id: qualification.id,
       entreprise: {
         nom: qualification.entreprise.nom,
@@ -1078,23 +1167,40 @@ export async function POST(request: Request) {
       prix: qualification.prix_total,
       date_emission: new Date().toISOString(),
     })
+  }).catch(err => {
+    // Log l'erreur mais ne bloque pas la response
+    console.error('n8n trigger failed:', err)
 
-    return Response.json({ status: 'processing' })
-
-  } catch (error) {
-    // 4. Update statut erreur
-    await supabase
+    // Optionnel : Mettre bc_status = 'error' en background
+    supabase
       .from('qualification')
-      .update({
-        bc_status: 'error',
-        bc_error: error.message
-      })
+      .update({ bc_status: 'error', bc_error: 'Webhook n8n inaccessible' })
       .eq('id', qualification_id)
+      .then()
+  })
 
-    return Response.json({ error: error.message }, { status: 500 })
-  }
+  // 4. Return IMMÉDIATEMENT (ne pas attendre n8n)
+  // Frontend affiche spinner + écoute Realtime pour bc_status = 'ready'
+  return Response.json({
+    status: 'processing',
+    message: 'Génération du BC lancée'
+  })
 }
 ```
+
+**Pourquoi Fire & Forget ?**
+- ✅ **Response rapide** : Frontend reçoit 200 en <100ms
+- ✅ **UI réactive** : Spinner immédiat, Supabase Realtime notifie quand prêt
+- ✅ **Pas de timeout** : n8n peut prendre 5-30s, pas de soucis
+- ✅ **Scalable** : Si n8n est lent, ça ne bloque pas l'API
+
+**Flow complet** :
+1. User clique "Générer BC"
+2. API return `{ status: 'processing' }` en 100ms
+3. UI affiche spinner
+4. n8n génère PDF (5-10s)
+5. n8n UPDATE Supabase `bc_status = 'ready'`
+6. Realtime notifie frontend → Spinner → "✅ BC prêt"
 
 ---
 
@@ -1118,7 +1224,11 @@ export default function RootLayout({ children }) {
 }
 ```
 
-### **Sentry Error Tracking**
+### **Sentry Error Tracking (Optionnel)**
+
+⚠️ **MVP** : Sentry peut être **différé Phase 2**. Les logs Vercel suffisent pour débugger.
+
+**Si besoin (production avec utilisateurs réels)** :
 
 ```typescript
 // sentry.client.config.ts
@@ -1130,6 +1240,10 @@ Sentry.init({
   tracesSampleRate: 0.1,
 })
 ```
+
+**Budget** : 5-10k events/mois gratuit, puis payant.
+
+**Recommandation** : Démarrer sans Sentry, ajouter quand l'équipe utilise vraiment l'app.
 
 ---
 
