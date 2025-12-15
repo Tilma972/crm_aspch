@@ -9,17 +9,40 @@ import { Plus, Search, Mail, Phone, MapPin } from "lucide-react";
 export default async function EntreprisesPage() {
   const supabase = await createClient();
   
-  // Récupérer les entreprises avec leurs qualifications pour les statuts
-  const { data: entreprises, error } = await supabase
+  // Récupérer les entreprises d'abord
+  const { data: entreprises, error: entrepriseError } = await supabase
     .from("entreprise")
-    .select(`
-      *,
-      qualification (
-        statut,
-        date_creation
-      )
-    `)
+    .select("*")
     .order("nom");
+
+  if (entrepriseError) {
+    console.error("Erreur entreprises:", entrepriseError);
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-status-error">Erreur lors du chargement des entreprises</p>
+          <p className="text-text-secondary text-sm mt-2">{entrepriseError.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Récupérer toutes les qualifications séparément
+  const { data: qualifications, error: qualError } = await supabase
+    .from("qualification")
+    .select("entreprise_id, statut, created_at");
+
+  if (qualError) {
+    console.warn("Erreur qualifications:", qualError);
+  }
+
+  // Associer les qualifications aux entreprises
+  const entreprisesWithQualifications = entreprises?.map(entreprise => ({
+    ...entreprise,
+    qualification: qualifications?.filter(q => q.entreprise_id === entreprise.id) || []
+  })) || [];
+
+  const error = null; // Reset error since we handle them separately
 
   if (error) {
     return (
@@ -30,7 +53,7 @@ export default async function EntreprisesPage() {
   }
 
   // Fonction pour déterminer le statut principal d'une entreprise
-  const getEntrepriseStatus = (qualifications: { statut: string; date_creation: string }[]) => {
+  const getEntrepriseStatus = (qualifications: { statut: string; created_at: string }[]) => {
     if (!qualifications || qualifications.length === 0) {
       return { label: "Prospect", variant: "secondary" as const };
     }
@@ -73,7 +96,7 @@ export default async function EntreprisesPage() {
 
       {/* Entreprises List */}
       <div className="space-y-3">
-        {entreprises?.map((entreprise) => {
+        {entreprisesWithQualifications?.map((entreprise) => {
           const status = getEntrepriseStatus(entreprise.qualification);
           
           return (
@@ -140,7 +163,7 @@ export default async function EntreprisesPage() {
           );
         })}
         
-        {(!entreprises || entreprises.length === 0) && (
+        {(!entreprisesWithQualifications || entreprisesWithQualifications.length === 0) && (
           <Card className="bg-surface-card border-border-subtle">
             <CardContent className="p-8 text-center">
               <p className="text-text-secondary">Aucune entreprise trouvée</p>
