@@ -1,7 +1,7 @@
 "use server";
 
 // ═══════════════════════════════════════════════════════════
-// 🔧 SERVER ACTION - CREATE QUALIFICATION
+// 🔧 SERVER ACTION - UPDATE QUALIFICATION
 // ═══════════════════════════════════════════════════════════
 
 import { createClient } from "@/lib/supabase/server";
@@ -9,19 +9,16 @@ import { createQualificationSchema, type CreateQualificationInput } from "@/lib/
 import { getMoisParutionString } from "@/lib/constants/pricing";
 import { revalidatePath } from "next/cache";
 
-interface CreateQualificationResult {
+interface UpdateQualificationResult {
   success: boolean;
-  data?: {
-    id: string;
-    qualification_id: string;
-  };
   error?: string;
 }
 
-export async function createQualification(
+export async function updateQualification(
+  qualificationId: string,
   entrepriseId: string,
   input: CreateQualificationInput
-): Promise<CreateQualificationResult> {
+): Promise<UpdateQualificationResult> {
   try {
     // ───────────────────────────────────────────────────────────
     // 1. VALIDATION
@@ -34,15 +31,13 @@ export async function createQualification(
     const moisParutionString = getMoisParutionString(validated.mois_parution);
 
     // ───────────────────────────────────────────────────────────
-    // 3. INSERTION SUPABASE
+    // 3. UPDATE SUPABASE
     // ───────────────────────────────────────────────────────────
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("qualification")
-      .insert({
-        entreprise_id: entrepriseId,
-        
+      .update({
         // Données métier
         format_encart: validated.format_encart,
         mois_parution: moisParutionString,
@@ -54,36 +49,37 @@ export async function createQualification(
         date_contact: validated.date_contact || null,
         commentaires: validated.commentaires || null,
         
+        // Tarifs spéciaux
+        remise_pourcentage: validated.remise_pourcentage || 0,
+        // is_pompiers n'est pas stocké en base pour l'instant, c'est une logique UI/Calcul
+        
         // Paiement échelonné
         paiement_echelonne: validated.paiement_echelonne,
         echeances: validated.echeances ? validated.echeances : null,
       })
-      .select("id")
-      .single();
+      .eq("id", qualificationId)
+      .eq("entreprise_id", entrepriseId);
 
     if (error) {
       console.error("Supabase error:", error);
       return {
         success: false,
-        error: "Erreur lors de la création de la qualification"
+        error: "Erreur lors de la mise à jour de la qualification"
       };
     }
 
     // ───────────────────────────────────────────────────────────
-    // 4. REVALIDATION & RETURN
+    // 4. REVALIDATION
     // ───────────────────────────────────────────────────────────
     revalidatePath(`/entreprises/${entrepriseId}`);
+    revalidatePath(`/entreprises/${entrepriseId}/qualifications/${qualificationId}`);
 
     return {
-      success: true,
-      data: {
-        id: data.id,
-        qualification_id: `QUAL-${data.id.substring(0, 8)}`
-      }
+      success: true
     };
 
   } catch (error) {
-    console.error("Create qualification error:", error);
+    console.error("Update qualification error:", error);
     
     if (error instanceof Error) {
       return {
@@ -94,7 +90,7 @@ export async function createQualification(
     
     return {
       success: false,
-      error: "Erreur inconnue lors de la création"
+      error: "Erreur inconnue lors de la mise à jour"
     };
   }
 }

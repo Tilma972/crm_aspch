@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Building2,
   Settings,
+  FileText,
 } from "lucide-react";
 
 const bottomNavRoutes = [
@@ -19,6 +20,11 @@ const bottomNavRoutes = [
     label: "Entreprises",
     icon: Building2,
     href: "/entreprises",
+  },
+  {
+    label: "Qualifications",
+    icon: FileText,
+    href: "/qualifications",
   },
   {
     label: "Paramètres",

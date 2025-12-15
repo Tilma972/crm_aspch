@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS qualification (
 CREATE INDEX IF NOT EXISTS idx_qualification_entreprise ON qualification(entreprise_id);
 CREATE INDEX IF NOT EXISTS idx_qualification_statut ON qualification(statut);
 CREATE INDEX IF NOT EXISTS idx_qualification_format ON qualification(format_encart);
-CREATE INDEX IF NOT EXISTS idx_qualification_bc_status ON qualification(bc_status) WHERE bc_status IS NOT NULL;
+-- CREATE INDEX IF NOT EXISTS idx_qualification_bc_status ON qualification(bc_status) WHERE bc_status IS NOT NULL;
 
 -- Trigger qualification
 DROP TRIGGER IF EXISTS update_qualification_updated_at ON qualification;
@@ -126,52 +126,52 @@ CREATE INDEX IF NOT EXISTS idx_interaction_type ON interaction(type);
 CREATE INDEX IF NOT EXISTS idx_interaction_created_at ON interaction(created_at DESC);
 
 -- Views
-CREATE OR REPLACE VIEW entreprise_summary AS
-SELECT
-  e.id,
-  e.nom,
-  e.email,
-  e.telephone,
-  e.ville,
-  COUNT(DISTINCT q.id) AS nb_qualifications,
-  SUM(q.prix_total) AS ca_total,
-  COUNT(DISTINCT q.id) FILTER (WHERE q.statut = 'Payé') AS nb_qualifications_payees,
-  MAX(i.created_at) AS derniere_interaction_date,
-  (
-    SELECT type
-    FROM interaction
-    WHERE entreprise_id = e.id
-    ORDER BY created_at DESC
-    LIMIT 1
-  ) AS derniere_interaction_type,
-  COUNT(DISTINCT i.id) AS nb_interactions
-FROM entreprise e
-LEFT JOIN qualification q ON q.entreprise_id = e.id
-LEFT JOIN interaction i ON i.entreprise_id = e.id
-GROUP BY e.id;
+-- CREATE OR REPLACE VIEW entreprise_summary AS
+-- SELECT
+--   e.id,
+--   e.nom,
+--   e.email,
+--   e.telephone,
+--   e.ville,
+--   COUNT(DISTINCT q.id) AS nb_qualifications,
+--   SUM(q.prix_total) AS ca_total,
+--   COUNT(DISTINCT q.id) FILTER (WHERE q.statut = 'Payé') AS nb_qualifications_payees,
+--   MAX(i.created_at) AS derniere_interaction_date,
+--   (
+--     SELECT type
+--     FROM interaction
+--     WHERE entreprise_id = e.id
+--     ORDER BY created_at DESC
+--     LIMIT 1
+--   ) AS derniere_interaction_type,
+--   COUNT(DISTINCT i.id) AS nb_interactions
+-- FROM entreprise e
+-- LEFT JOIN qualification q ON q.entreprise_id = e.id
+-- LEFT JOIN interaction i ON i.entreprise_id = e.id
+-- GROUP BY e.id;
 
-CREATE OR REPLACE VIEW qualification_alerts AS
-SELECT
-  q.id,
-  q.entreprise_id,
-  e.nom AS entreprise_nom,
-  q.statut,
-  q.prix_total,
-  q.bc_status,
-  q.bc_generated_at,
-  CASE
-    WHEN q.statut = 'BC envoyé'
-      AND q.bc_generated_at < NOW() - INTERVAL '15 days'
-    THEN 'paiement_retard'
-    WHEN q.statut = 'Payé'
-      AND q.bat_status IS NULL
-    THEN 'visuel_manquant'
-    ELSE NULL
-  END AS alerte_type,
-  EXTRACT(DAY FROM NOW() - q.bc_generated_at)::INTEGER AS jours_depuis_bc
-FROM qualification q
-JOIN entreprise e ON e.id = q.entreprise_id
-WHERE q.statut IN ('BC envoyé', 'Payé');
+-- CREATE OR REPLACE VIEW qualification_alerts AS
+-- SELECT
+--   q.id,
+--   q.entreprise_id,
+--   e.nom AS entreprise_nom,
+--   q.statut,
+--   q.prix_total,
+--   q.bc_status,
+--   q.bc_generated_at,
+--   CASE
+--     WHEN q.statut = 'BC envoyé'
+--       AND q.bc_generated_at < NOW() - INTERVAL '15 days'
+--     THEN 'paiement_retard'
+--     WHEN q.statut = 'Payé'
+--       AND q.bat_status IS NULL
+--     THEN 'visuel_manquant'
+--     ELSE NULL
+--   END AS alerte_type,
+--   EXTRACT(DAY FROM NOW() - q.bc_generated_at)::INTEGER AS jours_depuis_bc
+-- FROM qualification q
+-- JOIN entreprise e ON e.id = q.entreprise_id
+-- WHERE q.statut IN ('BC envoyé', 'Payé');
 
 -- RLS Policies
 -- Entreprise

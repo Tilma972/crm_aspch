@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { z } from 'zod';
-import { FORMATS_ASPCH, MOIS_CALENDRIER, MODES_PAIEMENT } from '@/lib/constants/pricing';
+import { MOIS_CALENDRIER } from '@/lib/constants/pricing';
 
 // ───────────────────────────────────────────────────────────
 // Schema création qualification
