@@ -30,7 +30,7 @@ export default async function EntreprisesPage() {
   }
 
   // Fonction pour déterminer le statut principal d'une entreprise
-  const getEntrepriseStatus = (qualifications: any[]) => {
+  const getEntrepriseStatus = (qualifications: { statut: string; date_creation: string }[]) => {
     if (!qualifications || qualifications.length === 0) {
       return { label: "Prospect", variant: "secondary" as const };
     }
