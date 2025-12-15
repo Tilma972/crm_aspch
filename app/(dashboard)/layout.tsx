@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { UserNav } from "@/components/layout/user-nav";
-import { MobileNav } from "@/components/layout/mobile-nav";
+import { BottomNavBar } from "@/components/layout/bottom-nav-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
     LayoutDashboard,
@@ -78,15 +78,17 @@ export default function DashboardLayout({
                         <ThemeToggle />
                         <Separator orientation="vertical" className="h-6" />
                         <UserNav />
-                        <MobileNav />
                     </div>
                 </div>
             </header>
 
             {/* MAIN CONTENT */}
-            <main className="container px-4 py-6 md:py-8">
+            <main className="container px-4 py-6 md:py-8 pb-20 md:pb-8">
                 {children}
             </main>
+
+            {/* BOTTOM NAVIGATION - Mobile Only */}
+            <BottomNavBar />
         </div>
     );
 }
