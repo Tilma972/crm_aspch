@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/components/query-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +17,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next + Supabase Starter",
+  title: "ASPCH CRM - Gestion des Qualifications",
   description:
-    "Next.js 15 Supabase Starter CLI tool that bootstraps a Next.js 15 project with Supabase, React Query, and built-in authentication for rapid development. 🚀",
+    "Plateforme de gestion des qualifications pour l'Amicale des Sapeurs-Pompiers de Clermont-l'Hérault. Calendriers d'annonces, tarification automatique, facturation.",
+  keywords: ["CRM", "ASPCH", "Qualifications", "Calendrier", "Sapeurs-Pompiers"],
+  authors: [{ name: "ASPCH", url: "https://pompiers34800.com" }],
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  openGraph: {
+    title: "ASPCH CRM",
+    description: "Gestion des qualifications ASPCH",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -26,13 +36,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr" suppressHydrationWarning>
+      <head />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <QueryProvider>
-          {children}
-          <Toaster position="top-center" duration={3000} />
-        </QueryProvider>
+        className={cn(
+          `${geistSans.variable} ${geistMono.variable} antialiased`,
+          "bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-200"
+        )}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange={false}
+        >
+          <QueryProvider>
+            {children}
+            <Toaster position="top-center" duration={3000} />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
