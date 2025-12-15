@@ -40,3 +40,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# n8n workflows (old project archive)
+/n8n_old_project/
+
+# supabase temp files
+/supabase/.temp/
+
+# python analysis scripts (deprecated)
+*.py
+analysis_output.txt
+sample_row.txt
+export*.csv
+
