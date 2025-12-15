@@ -49,7 +49,21 @@ export default {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			// ASPCH Design System Colors
+  			'background-main': '#1A202C',
+  			'surface-card': '#2D3748',
+  			'text-primary': '#E2E8F0',
+  			'text-secondary': '#A0AEC0',
+  			'accent-blue': '#3B82F6',
+  			'icon-neutral': '#63B3ED',
+  			'border-subtle': '#4A5568',
+  			'status-error': '#EF4444',
+  			'status-success': '#48BB78',
+  			'status-warning': '#F6E05E'
+  		},
+  		fontFamily: {
+  			sans: ['Inter', 'sans-serif']
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

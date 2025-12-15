@@ -31,7 +31,7 @@ export function BottomNavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 h-24 bg-[#1A2530]/80 backdrop-blur-sm border-t border-white/10 flex justify-around items-start pt-2 px-2 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 h-24 bg-surface-card/90 backdrop-blur-sm border-t border-border-subtle flex justify-around items-start pt-2 px-2 md:hidden">
       {bottomNavRoutes.map((route) => (
         <Link
           href={route.href}
@@ -39,16 +39,16 @@ export function BottomNavBar() {
           className={cn(
             "flex flex-col items-center justify-center text-center w-24 text-xs font-medium transition-colors duration-200",
             pathname === route.href
-              ? "text-[#0d7ff2]"
-              : "text-[#90adcb] hover:text-white"
+              ? "text-accent-blue"
+              : "text-text-secondary hover:text-text-primary"
           )}
         >
           <route.icon
             className={cn(
               "h-8 w-8 mb-1",
               pathname === route.href
-                ? "text-[#0d7ff2]"
-                : "text-[#90adcb]"
+                ? "text-accent-blue"
+                : "text-icon-neutral"
             )}
           />
           {route.label}

@@ -27,26 +27,26 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Tableau de bord</h2>
-        <p className="text-sm text-muted-foreground">Vue d'ensemble de votre activité</p>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-text-primary">Tableau de bord</h2>
+        <p className="text-sm text-text-secondary">Vue d'ensemble de votre activité</p>
       </div>
 
       {/* Grid responsive : 1 colonne mobile, 2 tablet, 4 desktop */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenu Total</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-text-primary">Revenu Total</CardTitle>
+            <TrendingUp className="h-4 w-4 text-accent-blue" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-accent-blue">
               {new Intl.NumberFormat("fr-FR", {
                 style: "currency",
                 currency: "EUR",
                 minimumFractionDigits: 0,
               }).format(revenuTotal)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-text-secondary">
               {stats.paye} qualification(s) payée(s)
             </p>
           </CardContent>
@@ -54,34 +54,34 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entreprises</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-text-primary">Entreprises</CardTitle>
+            <Building2 className="h-4 w-4 text-icon-neutral" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalEntreprises || 0}</div>
-            <p className="text-xs text-muted-foreground">Total dans la base</p>
+            <div className="text-2xl font-bold text-text-primary">{totalEntreprises || 0}</div>
+            <p className="text-xs text-text-secondary">Total dans la base</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-text-primary">En attente</CardTitle>
+            <Clock className="h-4 w-4 text-status-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.nouveau}</div>
-            <p className="text-xs text-muted-foreground">Nouvelles qualifications</p>
+            <div className="text-2xl font-bold text-status-warning">{stats.nouveau}</div>
+            <p className="text-xs text-text-secondary">Nouvelles qualifications</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">BC envoyés</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-text-primary">BC envoyés</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-status-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.bc_envoye}</div>
-            <p className="text-xs text-muted-foreground">En attente signature</p>
+            <div className="text-2xl font-bold text-status-success">{stats.bc_envoye}</div>
+            <p className="text-xs text-text-secondary">En attente signature</p>
           </CardContent>
         </Card>
       </div>

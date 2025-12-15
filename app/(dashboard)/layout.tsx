@@ -39,16 +39,16 @@ export default function DashboardLayout({
     const pathname = usePathname();
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background-main">
             {/* NAVBAR DESKTOP & MOBILE */}
-            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-50 w-full border-b border-border-subtle bg-surface-card/95 backdrop-blur supports-[backdrop-filter]:bg-surface-card/60">
                 <div className="container flex h-16 items-center px-4">
                     {/* Logo */}
                     <Link href="/" className="flex items-center space-x-2 mr-6 group">
-                        <div className="h-8 w-8 bg-blue-600 dark:bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:bg-blue-700 transition-colors">
+                        <div className="h-8 w-8 bg-accent-blue rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:bg-accent-blue/80 transition-colors">
                             A
                         </div>
-                        <span className="font-bold text-lg hidden sm:inline">CRM ASPCH</span>
+                        <span className="font-bold text-lg hidden sm:inline text-text-primary">CRM ASPCH</span>
                     </Link>
 
                     {/* Separator */}
@@ -61,10 +61,10 @@ export default function DashboardLayout({
                                 key={route.href}
                                 href={route.href}
                                 className={cn(
-                                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-muted",
+                                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-surface-card/50",
                                     pathname === route.href
-                                        ? "bg-muted text-foreground"
-                                        : "text-muted-foreground"
+                                        ? "bg-surface-card/50 text-accent-blue"
+                                        : "text-text-secondary hover:text-text-primary"
                                 )}
                             >
                                 <route.icon className="h-4 w-4" />
