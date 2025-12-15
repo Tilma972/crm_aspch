@@ -11,6 +11,7 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -63,6 +64,7 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
+        <SheetTitle className="sr-only">Menu de navigation</SheetTitle>
         <div className="space-y-4 py-4 flex flex-col h-full bg-gradient-to-b from-slate-900 to-slate-950 text-white">
           {/* Header */}
           <div className="px-6 py-2 flex items-center justify-between">
