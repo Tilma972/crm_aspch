@@ -3,8 +3,8 @@ import LoginForm from "./login-form";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Login",
-  description: "Login to your account",
+  title: "Connexion",
+  description: "Connectez-vous à votre compte",
 };
 
 export default function LoginPage() {
@@ -13,10 +13,10 @@ export default function LoginPage() {
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Welcome back
+            Bienvenue !
           </h1>
           <p className="text-sm text-muted-foreground">
-            Enter your email to sign in to your account
+            Entrez votre email pour vous connecter à votre compte
           </p>
         </div>
         <Suspense>

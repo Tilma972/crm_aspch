@@ -25,27 +25,17 @@ import { useRouter } from "next/navigation";
 const signupSchema = z.object({
   name: z
     .string()
-    .min(2, { message: "Full name must be at least 2 characters long" })
-    .max(50, { message: "Full name can't exceed 50 characters" }),
+    .min(2, { message: "Le nom doit contenir au moins 2 caractères" }),
 
-  email: z.string().email({ message: "Invalid email format" }),
+  email: z.string().email({ message: "Email invalide" }),
 
   phone: z
     .string()
-    .regex(/^\d+$/, { message: "Phone number must contain only digits" })
-    .min(10, { message: "Phone number must be at least 10 digits" })
-    .max(15, { message: "Phone number can't exceed 15 digits" }),
+    .min(9, { message: "Le numéro de téléphone doit contenir au moins 9 caractères" }),
 
   password: z
     .string()
-    .min(8, { message: "Password must be at least 8 characters long" })
-    .regex(/[A-Z]/, {
-      message: "Password must include at least one uppercase letter",
-    })
-    .regex(/\d/, { message: "Password must include at least one number" })
-    .regex(/[\W_]/, {
-      message: "Password must include at least one special character",
-    }),
+    .min(6, { message: "Le mot de passe doit contenir au moins 6 caractères" }),
 });
 
 export default function RegisterForm() {
@@ -68,12 +58,12 @@ export default function RegisterForm() {
 
       if (response.error) {
         toast.error(
-          "Something went wrong with your credintials! try again later."
+          "Une erreur s'est produite. Veuillez réessayer plus tard."
         );
         return;
       }
 
-      toast.success("Just a step away! check your inbox for activation link.");
+      toast.success("Presque terminé ! Vérifiez votre boîte de réception pour le lien d'activation.");
       router.push("/");
     });
   }
@@ -82,7 +72,7 @@ export default function RegisterForm() {
       <div className="grid gap-6">
         <Button variant="outline" type="button" disabled={isPending}>
           <Icons.google className="mr-2 h-4 w-4" />
-          Sign up with Google
+          S'inscrire avec Google
         </Button>
         <Separator />
         <Form {...form}>
@@ -93,10 +83,10 @@ export default function RegisterForm() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Nom</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="my name is..."
+                        placeholder="Mon nom..."
                         {...field}
                         disabled={isPending}
                       />
@@ -113,7 +103,7 @@ export default function RegisterForm() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="example@mail.com"
+                        placeholder="exemple@mail.com"
                         {...field}
                         disabled={isPending}
                       />
@@ -127,10 +117,10 @@ export default function RegisterForm() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pnone</FormLabel>
+                    <FormLabel>Téléphone</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="+123456789"
+                        placeholder="+33123456789"
                         {...field}
                         disabled={isPending}
                       />
@@ -144,10 +134,10 @@ export default function RegisterForm() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Mot de passe</FormLabel>
                     <FormControl>
                       <PasswordInput
-                        placeholder="password"
+                        placeholder="mot de passe"
                         type="password"
                         {...field}
                         disabled={isPending}
@@ -162,10 +152,10 @@ export default function RegisterForm() {
               {isPending ? (
                 <div className="flex items-center justify-center gap-1">
                   <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Becomming a member...</span>
+                  <span>Création en cours...</span>
                 </div>
               ) : (
-                "Become a member"
+                "Créer mon compte"
               )}
             </Button>
           </form>
@@ -174,7 +164,7 @@ export default function RegisterForm() {
       <div className="text-center">
         <Link href="/login" className="w-full">
           <Button variant="outline" className="w-full">
-            Back to Login
+            Retour à la connexion
           </Button>
         </Link>
       </div>

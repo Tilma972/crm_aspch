@@ -24,13 +24,11 @@ import { toast } from "sonner";
 
 const loginSchema = z.object({
   email: z
-    .string({ required_error: "email is required" })
-    .email({ message: "invalid email format" })
-    .min(11),
+    .string({ required_error: "L'email est requis" })
+    .email({ message: "Email invalide" }),
   password: z
     .string()
-    .min(8, { message: "Password must be at least 8 characters long" })
-    .regex(/\d/, { message: "Password must include at least one number" }),
+    .min(6, { message: "Le mot de passe doit contenir au moins 6 caractères" }),
 });
 
 export default function LoginForm() {
@@ -53,13 +51,14 @@ export default function LoginForm() {
       const response = await login(values);
 
       if (response.error) {
-        toast.error("Something went wrong with your creditials!");
+        toast.error("Erreur lors de la connexion. Vérifiez vos identifiants.");
         return;
       }
 
       queryClient.invalidateQueries({ queryKey: ["user"] }); //invalidate the user
+      const redirectTo = searchParams.get("redirect") || "/";
       router.push(redirectTo);
-      toast.success("Welcome Back!");
+      toast.success("Bienvenue !");
     });
   }
 
@@ -76,7 +75,7 @@ export default function LoginForm() {
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="example@mail.com"
+                      placeholder="exemple@mail.com"
                       {...field}
                       disabled={isPending}
                     />
@@ -90,10 +89,10 @@ export default function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Mot de passe</FormLabel>
                   <FormControl>
                     <PasswordInput
-                      placeholder="password"
+                      placeholder="mot de passe"
                       {...field}
                       disabled={isPending}
                     />
@@ -107,10 +106,10 @@ export default function LoginForm() {
             {isPending ? (
               <div className="flex items-center justify-center gap-1">
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                <span>verifing...</span>
+                <span>Vérification...</span>
               </div>
             ) : (
-              "Verify Now"
+              "Connexion"
             )}
           </Button>
         </form>
@@ -120,11 +119,11 @@ export default function LoginForm() {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or</span>
+          <span className="bg-background px-2 text-muted-foreground">Ou</span>
         </div>
       </div>
       <Button variant="outline" asChild>
-        <Link href="/register">Create an account</Link>
+        <Link href="/register">Créer un compte</Link>
       </Button>
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
@@ -132,7 +131,7 @@ export default function LoginForm() {
         </div>
         <div className="relative flex justify-center text-xs uppercase">
           <span className="bg-background px-2 text-muted-foreground">
-            Social Login
+            Connexion sociale
           </span>
         </div>
       </div>
