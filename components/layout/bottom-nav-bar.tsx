@@ -31,31 +31,29 @@ export function BottomNavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 md:hidden">
-      <div className="flex justify-around h-16 items-center">
-        {bottomNavRoutes.map((route) => (
-          <Link
-            href={route.href}
-            key={route.href}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 h-24 bg-[#1A2530]/80 backdrop-blur-sm border-t border-white/10 flex justify-around items-start pt-2 px-2 md:hidden">
+      {bottomNavRoutes.map((route) => (
+        <Link
+          href={route.href}
+          key={route.href}
+          className={cn(
+            "flex flex-col items-center justify-center text-center w-24 text-xs font-medium transition-colors duration-200",
+            pathname === route.href
+              ? "text-[#0d7ff2]"
+              : "text-[#90adcb] hover:text-white"
+          )}
+        >
+          <route.icon
             className={cn(
-              "flex flex-col items-center justify-center p-2 text-xs font-medium transition-colors duration-200",
+              "h-8 w-8 mb-1",
               pathname === route.href
-                ? "text-sky-500"
-                : "text-zinc-400 hover:text-white"
+                ? "text-[#0d7ff2]"
+                : "text-[#90adcb]"
             )}
-          >
-            <route.icon
-              className={cn(
-                "h-6 w-6 mb-1",
-                pathname === route.href
-                  ? "text-sky-500"
-                  : "text-zinc-400"
-              )}
-            />
-            {route.label}
-          </Link>
-        ))}
-      </div>
+          />
+          {route.label}
+        </Link>
+      ))}
     </nav>
   );
 }

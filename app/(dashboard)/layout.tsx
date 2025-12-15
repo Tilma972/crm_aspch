@@ -83,7 +83,7 @@ export default function DashboardLayout({
             </header>
 
             {/* MAIN CONTENT */}
-            <main className="container px-4 py-6 md:py-8 pb-20 md:pb-8">
+            <main className="container px-4 py-6 md:py-8 pb-28 md:pb-8">
                 {children}
             </main>
 
