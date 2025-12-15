@@ -1,11 +1,22 @@
 {
-  "servers": {
+  "mcpServers": {
     "shadcn": {
       "command": "npx",
       "args": [
         "shadcn@latest",
         "mcp"
       ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase"
+      ],
+      "env": {
+        "SUPABASE_URL": "https://wetwofwmfpvnvplytldh.supabase.co",
+        "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHdvZndtZnB2bnZwbHl0bGRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMzExNjIsImV4cCI6MjA4MDcwNzE2Mn0.k4-uoZblnP4mpCVJmZEmoj36yH14-xG3SxajC3IHPnw"
+      }
     }
   }
 }
