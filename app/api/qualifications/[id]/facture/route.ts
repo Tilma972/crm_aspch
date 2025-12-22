@@ -251,7 +251,7 @@ export async function GET(
     // Récupérer le statut
     const { data, error } = await supabase
       .from('qualification')
-      .select('facture_status, facture_numero, facture_url, facture_generated_at, facture_error')
+      .select('facture_status, facture_numero, facture_url, facture_generated_at, facture_error, date_paiement, reference_paiement')
       .eq('id', qualificationId)
       .single();
 
@@ -280,6 +280,8 @@ export async function GET(
       facture_url: finalUrl,
       facture_generated_at: data.facture_generated_at,
       facture_error: data.facture_error,
+      date_paiement: data.date_paiement,
+      reference_paiement: data.reference_paiement,
     });
   } catch (err) {
     console.error('Erreur GET status:', err);
