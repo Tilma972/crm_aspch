@@ -30,7 +30,6 @@ export function ThemeProvider({
       storageKey="aspch-theme"
       themes={["light", "dark"]}
       forcedTheme={undefined}
-      enableTransitionOnChange
     >
       {children}
     </NextThemesProvider>

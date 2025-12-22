@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { QualificationList } from "./components/qualification-list";
 import { Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 export default async function QualificationsPage() {
   const supabase = await createClient();

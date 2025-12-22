@@ -28,7 +28,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-text-primary">Tableau de bord</h2>
-        <p className="text-sm text-text-secondary">Vue d'ensemble de votre activité</p>
+        <p className="text-sm text-text-secondary">Vue d&apos;ensemble de votre activité</p>
       </div>
 
       {/* Grid responsive : 1 colonne mobile, 2 tablet, 4 desktop */}

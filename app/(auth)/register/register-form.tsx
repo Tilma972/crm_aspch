@@ -58,7 +58,7 @@ export default function RegisterForm() {
 
       if (response.error) {
         toast.error(
-          "Une erreur s'est produite. Veuillez réessayer plus tard."
+          "Une erreur s&apos;est produite. Veuillez réessayer plus tard."
         );
         return;
       }
@@ -72,7 +72,7 @@ export default function RegisterForm() {
       <div className="grid gap-6">
         <Button variant="outline" type="button" disabled={isPending}>
           <Icons.google className="mr-2 h-4 w-4" />
-          S'inscrire avec Google
+          S&apos;inscrire avec Google
         </Button>
         <Separator />
         <Form {...form}>

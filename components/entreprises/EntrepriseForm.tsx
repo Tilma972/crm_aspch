@@ -31,7 +31,7 @@ const formSchema = z.object({
 });
 
 interface EntrepriseFormProps {
-    initialData?: any;
+    initialData?: Record<string, unknown>;
 }
 
 export function EntrepriseForm({ initialData }: EntrepriseFormProps) {
@@ -41,12 +41,12 @@ export function EntrepriseForm({ initialData }: EntrepriseFormProps) {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            nom: initialData.nom || "",
-            email: initialData.email || "",
-            telephone: initialData.telephone || "",
-            adresse: initialData.adresse || "",
-            ville: initialData.ville || "",
-            cp: initialData.cp || "",
+            nom: (initialData?.nom as string) || "",
+            email: (initialData?.email as string) || "",
+            telephone: (initialData?.telephone as string) || "",
+            adresse: (initialData?.adresse as string) || "",
+            ville: (initialData?.ville as string) || "",
+            cp: (initialData?.cp as string) || "",
         },
     });
 

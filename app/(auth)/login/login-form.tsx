@@ -36,7 +36,6 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const redirectTo = searchParams.get("redirect") || "/";
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),

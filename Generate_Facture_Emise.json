@@ -1,0 +1,881 @@
+{
+  "name": "Generate_Facture_Emise",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Extract & Validate Input - Format minimal + backward compatibility\nconst inputData = $input.item.json;\nconst data = inputData.body || inputData;\n\n// Validation champ requis\nconst qualificationId = data.qualification_id;\nif (!qualificationId) {\n  throw new Error('qualification_id est requis');\n}\n\n// Send email par défaut true\nconst sendEmail = (data.send_email !== undefined) ? !!data.send_email : true;\n\n// Détection mode legacy (pour logs/monitoring)\nconst hasLegacyFields = !!data.entreprise || !!data.montant_total;\nif (hasLegacyFields) {\n  console.log('⚠️ Legacy payload detected - entreprise/montant_total ignored, using DB instead');\n}\n\n// Retour format minimal\nreturn {\n  qualificationId,\n  sendEmail,\n  hasLegacyFields,\n  source: 'crm_nextjs'\n};"
+      },
+      "id": "14e69631-404a-408e-a9e2-95c4f024cf61",
+      "name": "Extract & Validate Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2928,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise la sortie du node executeQuery\nconst j = $input.item.json;\n\n// Cas 1: { numero: 'FA-...' } (sortie directe)\nif (typeof j?.numero === 'string' && j.numero.length > 0) {\n  console.log('✅ Facture numero normalized:', j.numero);\n  return { factureNumero: j.numero };\n}\n\n// Cas 2: { data: 'FA-...' } (votre input actuel)\nif (typeof j?.data === 'string' && j.data.length > 0) {\n  console.log('✅ Facture numero normalized (from data):', j.data);\n  return { factureNumero: j.data };\n}\n\n// Cas 3: [{ numero: 'FA-...' }] (tableau de résultats)\nif (Array.isArray(j) && j.length > 0 && typeof j[0]?.numero === 'string' && j[0].numero.length > 0) {\n  console.log('✅ Facture numero normalized (from array):', j[0].numero);\n  return { factureNumero: j[0].numero };\n}\n\n// Cas 4: Tableau avec data [{ data: 'FA-...' }]\nif (Array.isArray(j) && j.length > 0 && typeof j[0]?.data === 'string' && j[0].data.length > 0) {\n  console.log('✅ Facture numero normalized (from array data):', j[0].data);\n  return { factureNumero: j[0].data };\n}\n\nthrow new Error(`Impossible de lire le numero de facture. Payload reçu: ${JSON.stringify(j)}`);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        464
+      ],
+      "id": "6c613af8-8d2f-474b-be14-b0723a0abc66",
+      "name": "Normalize Facture Numero"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build HTML Facture Émise - Sources DB uniquement\nconst qualification = $('Fetch Qualification').item.json;\nconst entreprise = $('Fetch Entreprise').item.json;\nconst factureNumero = $('Normalize Facture Numero').item.json.factureNumero;\n\n// Validation entreprise email\nif (!entreprise.email) {\n  console.warn('⚠️ Entreprise sans email:', entreprise.nom);\n}\n\n// Calculs montants\nconst montantTotal = parseFloat(qualification.prix_total);\nconst nombreParutions = qualification.nombre_parutions || 1;\nconst prixUnitaire = (montantTotal / nombreParutions).toFixed(2);\n\n// Dates\nconst dateEmission = new Date();\nconst dateEcheance = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);\nconst formattedEmission = dateEmission.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });\nconst formattedEcheance = dateEcheance.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });\n\n// Normalisation données\nconst nomEntreprise = (entreprise.nom || 'ENTREPRISE').toUpperCase();\nconst formatEncart = qualification.format_encart || '6X4';\nconst moisParution = qualification.mois_parution || 'À définir';\n\n// Construction HTML\nconst html = `<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    @page { margin: 0; }\n    \n    body {\n      font-family: 'Helvetica', 'Arial', sans-serif;\n      margin: 0;\n      padding: 40px;\n      color: #1f2937;\n      font-size: 13px;\n      line-height: 1.5;\n      background: white;\n    }\n    \n    .header {\n      display: flex;\n      align-items: flex-start;\n      justify-content: space-between;\n      margin-bottom: 40px;\n      border-bottom: 3px solid #b91c1c;\n      padding-bottom: 20px;\n    }\n    \n    .logo-container {\n      display: flex;\n      align-items: center;\n      gap: 15px;\n    }\n    \n    .logo-img {\n      height: 80px;\n      width: auto;\n    }\n    \n    .org-info {\n      line-height: 1.4;\n    }\n    \n    .org-title {\n      font-size: 18px;\n      font-weight: bold;\n      color: #b91c1c;\n      margin-bottom: 8px;\n    }\n    \n    .org-details {\n      font-size: 12px;\n      color: #6b7280;\n    }\n    \n    .facture-info {\n      text-align: right;\n    }\n    \n    .facture-title {\n      font-size: 32px;\n      font-weight: bold;\n      color: #111;\n      margin: 0 0 10px 0;\n    }\n    \n    .facture-numero {\n      font-size: 14px;\n      color: #6b7280;\n      font-weight: bold;\n    }\n    \n    .badge-emise {\n      display: inline-block;\n      background: #fef3c7;\n      color: #92400e;\n      padding: 6px 16px;\n      border-radius: 20px;\n      font-size: 12px;\n      font-weight: bold;\n      margin-top: 10px;\n      border: 1px solid #fcd34d;\n    }\n    \n    .client-info {\n      background: #f9fafb;\n      padding: 20px;\n      border-radius: 8px;\n      margin-bottom: 30px;\n    }\n    \n    .client-label {\n      font-size: 11px;\n      text-transform: uppercase;\n      color: #6b7280;\n      font-weight: bold;\n      margin-bottom: 8px;\n    }\n    \n    .client-name {\n      font-size: 16px;\n      font-weight: bold;\n      color: #111;\n      margin-bottom: 4px;\n    }\n    \n    .client-address {\n      font-size: 13px;\n      color: #4b5563;\n    }\n    \n    .dates-row {\n      display: flex;\n      gap: 30px;\n      margin-bottom: 30px;\n      font-size: 12px;\n    }\n    \n    .date-item {\n      flex: 1;\n    }\n    \n    .date-label {\n      color: #6b7280;\n      font-weight: bold;\n      margin-bottom: 4px;\n    }\n    \n    .date-value {\n      color: #111;\n    }\n    \n    .items-table {\n      width: 100%;\n      border-collapse: collapse;\n      margin-bottom: 30px;\n    }\n    \n    .items-table thead {\n      background: #f3f4f6;\n    }\n    \n    .items-table th {\n      text-align: left;\n      padding: 12px;\n      font-size: 12px;\n      font-weight: bold;\n      color: #374151;\n      text-transform: uppercase;\n      border-bottom: 2px solid #e5e7eb;\n    }\n    \n    .items-table th:last-child {\n      text-align: right;\n    }\n    \n    .items-table td {\n      padding: 12px;\n      border-bottom: 1px solid #e5e7eb;\n      font-size: 13px;\n    }\n    \n    .items-table td:last-child {\n      text-align: right;\n      font-weight: bold;\n    }\n    \n    .total-section {\n      display: flex;\n      justify-content: flex-end;\n      margin-bottom: 30px;\n    }\n    \n    .total-box {\n      width: 300px;\n      background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);\n      color: white;\n      padding: 20px;\n      border-radius: 8px;\n    }\n    \n    .total-label {\n      font-size: 14px;\n      opacity: 0.9;\n      margin-bottom: 8px;\n    }\n    \n    .total-amount {\n      font-size: 36px;\n      font-weight: bold;\n    }\n    \n    .payment-info {\n      background: #fef3c7;\n      border-left: 4px solid #f59e0b;\n      padding: 20px;\n      margin-bottom: 30px;\n      border-radius: 4px;\n    }\n    \n    .payment-title {\n      font-weight: bold;\n      color: #92400e;\n      margin-bottom: 10px;\n      font-size: 14px;\n    }\n    \n    .payment-details {\n      font-size: 13px;\n      color: #78350f;\n      line-height: 1.6;\n    }\n    \n    .bank-info {\n      background: #f3f4f6;\n      padding: 15px;\n      border-radius: 6px;\n      font-size: 12px;\n      color: #4b5563;\n      margin-bottom: 30px;\n    }\n    \n    .bank-label {\n      font-weight: bold;\n      color: #1f2937;\n      margin-bottom: 6px;\n    }\n    \n    .footer {\n      text-align: center;\n      font-size: 11px;\n      color: #9ca3af;\n      border-top: 1px solid #e5e7eb;\n      padding-top: 20px;\n      margin-top: 40px;\n    }\n  </style>\n</head>\n<body>\n\n  <div class=\"header\">\n    <div class=\"logo-container\">\n      <img src=\"https://npyfregghvnmqxwgkfea.supabase.co/storage/v1/object/public/logo/logo_amicale.png\" class=\"logo-img\" alt=\"Logo Amicale\">\n      <div class=\"org-info\">\n        <div class=\"org-title\">AMICALE DES SAPEURS-POMPIERS<br>DE CLERMONT-L'HÉRAULT</div>\n        <div class=\"org-details\">\n          Centre de Secours<br>\n          34800 Clermont-l'Hérault<br>\n          Tél: 04 67 88 22 33\n        </div>\n      </div>\n    </div>\n    <div class=\"facture-info\">\n      <h1 class=\"facture-title\">FACTURE</h1>\n      <div class=\"facture-numero\">N° ${factureNumero}</div>\n      <span class=\"badge-emise\">⏳ EN ATTENTE DE PAIEMENT</span>\n    </div>\n  </div>\n\n  <div class=\"client-info\">\n    <div class=\"client-label\">Facturé à</div>\n    <div class=\"client-name\">${nomEntreprise}</div>\n    <div class=\"client-address\">\n      ${entreprise.adresse || ''}<br>\n      ${entreprise.cp || ''} ${entreprise.ville || ''}\n      ${entreprise.email ? '<br>Email: ' + entreprise.email : ''}\n      ${entreprise.telephone ? '<br>Tél: ' + entreprise.telephone : ''}\n    </div>\n  </div>\n\n  <div class=\"dates-row\">\n    <div class=\"date-item\">\n      <div class=\"date-label\">Date d'émission</div>\n      <div class=\"date-value\">${formattedEmission}</div>\n    </div>\n    <div class=\"date-item\">\n      <div class=\"date-label\">Date d'échéance</div>\n      <div class=\"date-value\">${formattedEcheance}</div>\n    </div>\n  </div>\n\n  <table class=\"items-table\">\n    <thead>\n      <tr>\n        <th>Désignation</th>\n        <th style=\"text-align: center;\">Quantité</th>\n        <th style=\"text-align: right;\">Prix Unitaire</th>\n        <th style=\"text-align: right;\">Montant</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr>\n        <td>\n          <strong>Encart publicitaire Calendrier 2026</strong><br>\n          <span style=\"color: #6b7280; font-size: 12px;\">\n            Format: ${formatEncart} • Parution: ${moisParution}\n          </span>\n        </td>\n        <td style=\"text-align: center;\">${nombreParutions}</td>\n        <td style=\"text-align: right;\">${prixUnitaire} €</td>\n        <td style=\"text-align: right;\">${montantTotal.toFixed(2)} €</td>\n      </tr>\n    </tbody>\n  </table>\n\n  <div class=\"total-section\">\n    <div class=\"total-box\">\n      <div class=\"total-label\">MONTANT TOTAL</div>\n      <div class=\"total-amount\">${montantTotal.toFixed(2)} €</div>\n    </div>\n  </div>\n\n  <div class=\"payment-info\">\n    <div class=\"payment-title\">⚠️ Modalités de règlement</div>\n    <div class=\"payment-details\">\n      Merci de régler cette facture avant le <strong>${formattedEcheance}</strong>.<br>\n      Moyens de paiement acceptés: Chèque, Virement bancaire\n    </div>\n  </div>\n\n  <div class=\"bank-info\">\n    <div class=\"bank-label\">Coordonnées bancaires pour virement</div>\n    <strong>Amicale des Sapeurs-Pompiers de Clermont</strong><br>\n    IBAN: FR76 1005 7190 3500 0142 6170 134<br>\n    BIC: CMCIFRPP<br>\n    Banque: CIC CLERMONT L'HERAULT<br>\n    Référence: ${factureNumero}\n  </div>\n\n  <div class=\"footer\">\n    Amicale des Sapeurs-Pompiers de Clermont-l'Hérault - Association Loi 1901<br>\n    TVA non applicable, art. 293 B du CGI<br>\n    Document généré automatiquement - ${factureNumero}\n  </div>\n\n</body>\n</html>`;\n\nreturn { \n  html, \n  factureNumero,\n  entreprise,\n  qualification\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1264,
+        608
+      ],
+      "id": "c688a07d-8d29-4085-8cb9-37a82006b9af",
+      "name": "Build HTML Facture Émise"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert to Binary pour Gotenberg\nconst items = $input.all();\nconst htmlContent = items[0].json.html;\n\nif (!htmlContent) {\n  throw new Error('HTML manquant dans les données');\n}\n\n// Conversion en binaire\nconst buffer = Buffer.from(htmlContent, 'utf8');\nconst base64Data = buffer.toString('base64');\n\nreturn [{\n  json: items[0].json,\n  binary: {\n    data: {\n      data: base64Data,\n      fileName: \"index.html\",\n      mimeType: \"text/html\"\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        464
+      ],
+      "id": "a467c10c-c5f1-48a3-bac2-01a045f3a157",
+      "name": "Convert to Binary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gotenberg.dsolution-ia.fr/forms/chromium/convert/html",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "paperWidth",
+              "value": "210"
+            },
+            {
+              "name": "paperHeight",
+              "value": "297"
+            },
+            {
+              "name": "marginTop",
+              "value": "0"
+            },
+            {
+              "name": "marginBottom",
+              "value": "0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -880,
+        464
+      ],
+      "id": "4895d1f8-4b03-4a9c-91af-79498170b4e4",
+      "name": "Gotenberg: HTML to PDF",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "ZqqBwZymZkCpaOCs",
+          "name": "Gotenberg credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wetwofwmfpvnvplytldh.supabase.co/storage/v1/object/documents/factures/2026/{{ $('Normalize Facture Numero').item.json.factureNumero }}.pdf",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -544,
+        480
+      ],
+      "id": "bdb33a98-8c6c-4149-b5b2-82d3d7d69162",
+      "name": "Upload PDF Supabase Storage",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1ssW9cij3RHtJVaZ",
+          "name": "Header Auth supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "35414fb3-dfc1-42a8-928e-1842323af443",
+              "leftValue": "={{ $('Extract & Validate Data').item.json.sendEmail }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "710a4256-0c39-425d-a040-3636079f7cd7",
+      "name": "Should Send Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Build HTML Facture Émise').item.json.entreprise.email }}",
+        "subject": "=Facture {{ $('Normalize Facture Numero').item.json.factureNumero }} - Calendrier Pompiers 2026",
+        "message": "=<div style=\"font-family: Helvetica, Arial, sans-serif; color: #333; line-height: 1.6;\">\n  <p>Bonjour,</p>\n  \n  <p>Veuillez trouver ci-joint la facture <strong>{{ $('Normalize Facture Numero').item.json.factureNumero }}</strong> relative à votre participation au Calendrier des Sapeurs-Pompiers 2026.</p>\n  \n  <p><strong>Détails:</strong></p>\n  <ul>\n    <li>Montant: <strong>{{ $('Build HTML Facture Émise').item.json.qualification.prix_total }} €</strong></li>\n    <li>Format: {{ $('Build HTML Facture Émise').item.json.qualification.format_encart }}</li>\n    <li>Parution: {{ $('Build HTML Facture Émise').item.json.qualification.mois_parution }}</li>\n  </ul>\n  \n  <p>Merci de procéder au règlement avant la date d'échéance indiquée sur la facture.</p>\n  \n  <hr style=\"border: 0; border-top: 1px solid #eee; margin: 20px 0;\">\n  \n  <p style=\"font-size: 12px; color: #666;\">\n    <strong>Amicale des Sapeurs-Pompiers de Clermont-l'Hérault</strong><br>\n    Centre de Secours - 34800 Clermont-l'Hérault<br>\n    Tél: 04 67 88 22 33<br>\n    <a href=\"mailto:contact@pompiers34800.com\" style=\"color: #b91c1c;\">contact@pompiers34800.com</a>\n  </p>\n  \n  <p style=\"font-size: 11px; color: #999; font-style: italic;\">\n    Merci de ne pas répondre directement à cet email. Pour toute question, utilisez les coordonnées ci-dessus.\n  </p>\n</div>",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          },
+          "bccList": "contact@pompiers34800.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        144
+      ],
+      "id": "38993164-3e14-4849-b9b7-b688377e80b3",
+      "name": "Send Email with PDF",
+      "webhookId": "0366d3ce-f6b6-40ec-882d-5d1d0c604fe8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6NgvyrhAFKLsZ7O5",
+          "name": "Pompiers"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "fb286e0c-0a36-4ec4-afd3-c289d45ea07b",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        96,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"{{ $json.error || 'Unknown error' }}\",\n  \"qualification_id\": \"{{ $('Extract & Validate Data').item.json.qualificationId }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "5cecd1c2-b6aa-468f-98f8-5b452f422332",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "qualification",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.qualificationId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2720,
+        464
+      ],
+      "id": "0cc1d0aa-895f-4ae7-9199-692a384b9424",
+      "name": "Fetch Qualification",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZDFcgQadPWJy5dH",
+          "name": "Supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "entreprise",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Fetch Qualification').item.json.entreprise_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2464,
+        464
+      ],
+      "id": "ef09674c-229d-4d44-9b4e-16eec786765f",
+      "name": "Fetch Entreprise",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZDFcgQadPWJy5dH",
+          "name": "Supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wetwofwmfpvnvplytldh.supabase.co/rest/v1/rpc/next_facture_numero",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHdvZndtZnB2bnZwbHl0bGRoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTEzMTE2MiwiZXhwIjoyMDgwNzA3MTYyfQ.-iwUVyDOuBfMQj-xccPMUtgpVw8_Qw6aPU-9qUqpA1I"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHdvZndtZnB2bnZwbHl0bGRoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTEzMTE2MiwiZXhwIjoyMDgwNzA3MTYyfQ.-iwUVyDOuBfMQj-xccPMUtgpVw8_Qw6aPU-9qUqpA1I"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2256,
+        464
+      ],
+      "id": "1a1ad42c-b340-4280-b70a-fdf40c1cc9b9",
+      "name": "Get Facture Numero (RPC)"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "document",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "qualification_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Extract & Validate Data').item.json.qualificationId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "ready"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ $('Extract Storage Info').item.json.storage_path }}"
+            },
+            {
+              "fieldId": "generated_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        464
+      ],
+      "id": "c9da75a1-f82a-4281-815b-76ff8deb2d7e",
+      "name": "Update Document Table",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZDFcgQadPWJy5dH",
+          "name": "Supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "document",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "qualification_id",
+              "fieldValue": "={{ $('Extract & Validate Data').item.json.qualificationId }}"
+            },
+            {
+              "fieldId": "type",
+              "fieldValue": "facture"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "generating"
+            },
+            {
+              "fieldId": "numero",
+              "fieldValue": "={{ $('Normalize Facture Numero').item.json.factureNumero }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1888,
+        464
+      ],
+      "id": "0e698209-0f53-4929-822f-b03bb0894266",
+      "name": "Create Document (Generating)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZDFcgQadPWJy5dH",
+          "name": "Supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"facture_numero\": \"{{ $('Normalize Facture Numero').item.json.factureNumero }}\",\n  \"qualification_id\": \"{{ $('Extract & Validate Data').item.json.qualificationId }}\",\n  \"storage_path\": \"factures/2026/{{ $('Normalize Facture Numero').item.json.factureNumero }}.pdf\",\n  \"email_sent\": \"{{ $('Extract & Validate Data').item.json.sendEmail }}\",\n  \"processed_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        608,
+        464
+      ],
+      "id": "f7c8a2f2-68f8-4d8b-a2a6-07d25fd7d95e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-facture-emise",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3152,
+        464
+      ],
+      "id": "1a15dce8-d650-4dec-afce-c36468a20296",
+      "name": "Webhook Trigger",
+      "webhookId": "1074a6b8-bfbb-4915-8843-768c8b7a870a"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 📦 EXTRAIRE SUPABASE STORAGE INFO - Facture Upload\n// Node placé APRÈS HTTP Request Supabase Storage\n\nconst uploadResponse = $input.item.json;\nconst factureNumero = $('Normalize Facture Numero').item.json.factureNumero;\n\n// 🔍 Extraire la clé du fichier depuis la réponse\nconst fullKey = uploadResponse.body?.Key || uploadResponse.Key;\n\nif (!fullKey) {\n  throw new Error('❌ Upload response missing Key field');\n}\n\n// ✂️ Nettoyer le chemin (supprimer préfixe \"documents/\")\nconst storage_path = fullKey.replace('documents/', '');\n\n// ⚙️ CONFIG SUPABASE\nconst supabaseUrl = 'https://wetwofwmfpvnvplytldh.supabase.co';\nconst bucketName = 'documents';\n\n// 🌐 URL PUBLIQUE (si bucket public)\nconst public_url = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${storage_path}`;\n\n// 🔒 CONFIG BUCKET (À MODIFIER selon votre setup)\nconst isBucketPublic = false;  // true = public / false = privé (signed URLs)\n\nconst document_url = isBucketPublic ? public_url : null;\n\nconsole.log('📦 Storage path:', storage_path);\nconsole.log('🔒 Bucket privé:', !isBucketPublic);\nconsole.log('🔗 Document URL:', document_url || 'null (signed URLs requis)');\n\nreturn {\n  storage_path,           // \"factures/2026/FA-2025-0001.pdf\"\n  document_url,           // null ou URL publique\n  factureNumero,          // \"FA-2025-0001\"\n  upload_id: uploadResponse.body?.Id || uploadResponse.Id\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        480
+      ],
+      "id": "40298922-7af0-4574-b8d8-032aeec83e70",
+      "name": "Extract Storage Info"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "qualification",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Extract & Validate Data').item.json.qualificationId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "facture_status",
+              "fieldValue": "generating"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        464
+      ],
+      "id": "ecd3bbd0-7de7-4cd9-8afe-ad5b8480942f",
+      "name": "Update Qualification Status (Generating)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZDFcgQadPWJy5dH",
+          "name": "Supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "qualification",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Extract & Validate Data').item.json.qualificationId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "facture_status",
+              "fieldValue": "ready"
+            },
+            {
+              "fieldId": "facture_numero",
+              "fieldValue": "={{ $('Normalize Facture Numero').item.json.factureNumero }}"
+            },
+            {
+              "fieldId": "facture_generated_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "fieldId": "facture_url",
+              "fieldValue": "={{ $('Extract Storage Info').item.json.storage_path }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        464
+      ],
+      "id": "c3ea14dd-2dd0-4f2c-af0c-1f7370ebc017",
+      "name": "Update Qualification Status (Ready)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZDFcgQadPWJy5dH",
+          "name": "Supabase crm_aspch"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 📄 BUILD HTML FACTURE ACQUITTÉE - Sources DB uniquement\n// Node après Fetch Qualification + Fetch Entreprise\n\n// 🔍 Récupération données\nconst qualification = $('Fetch Qualification').item.json;\nconst entreprise = $('Fetch Entreprise').item.json;\nconst factureNumero = $('Normalize Facture Numero').item.json.factureNumero;\n\n// 💰 Calculs montants\nconst montantTotal = parseFloat(qualification.prix_total);\nconst nombreParutions = qualification.nombre_parutions || 1;\nconst prixUnitaire = (montantTotal / nombreParutions).toFixed(2);\n\n// 📅 Dates formatées FR\nconst dateEmission = new Date();\nconst datePaiement = qualification.facture_generated_at ? \n  new Date(qualification.facture_generated_at) : new Date();\nconst formattedEmission = dateEmission.toLocaleDateString('fr-FR', { \n  year: 'numeric', month: 'long', day: 'numeric' \n});\nconst formattedPaiement = datePaiement.toLocaleDateString('fr-FR', { \n  year: 'numeric', month: 'long', day: 'numeric' \n});\n\n// 🏢 Normalisation entreprise\nconst nomEntreprise = (entreprise.nom || 'ENTREPRISE').toUpperCase();\nconst formatEncart = qualification.format_encart || '6X4';\nconst moisParution = qualification.mois_parution || 'À définir';\n\n// 🎨 TEMPLATE HTML FACTURE ACQUITTÉE\nconst html = `<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    @page { margin: 0; }\n    \n    body {\n      font-family: 'Helvetica', 'Arial', sans-serif;\n      margin: 0; padding: 40px;\n      color: #1f2937; font-size: 13px;\n      line-height: 1.5; background: white;\n      position: relative;\n    }\n\n    /* 🖌️ TAMPON RUSTIQUE \"ACQUITTÉE\" */\n    .rust-stamp {\n      position: absolute; top: 45%; left: 50%;\n      transform: translate(-50%, -50%) rotate(-12deg);\n      border: 6px double #15803d; color: #15803d;\n      font-size: 72px; font-weight: 900;\n      padding: 10px 40px; opacity: 0.15;\n      text-transform: uppercase; border-radius: 12px;\n      pointer-events: none; z-index: 0;\n      letter-spacing: 5px;\n    }\n    \n    /* 📋 HEADER */\n    .header {\n      display: flex; align-items: flex-start;\n      justify-content: space-between;\n      margin-bottom: 40px; border-bottom: 3px solid #b91c1c;\n      padding-bottom: 20px; position: relative; z-index: 10;\n    }\n    \n    .logo-container { display: flex; align-items: center; gap: 15px; }\n    .logo-img { height: 80px; width: auto; }\n    \n    .org-info { line-height: 1.4; }\n    .org-title {\n      font-size: 18px; font-weight: bold; color: #b91c1c;\n      margin-bottom: 8px;\n    }\n    .org-details { font-size: 12px; color: #6b7280; }\n    \n    .facture-info { text-align: right; }\n    .facture-title {\n      font-size: 32px; font-weight: bold; color: #111;\n      margin: 0 0 10px 0;\n    }\n    .facture-numero {\n      font-size: 14px; color: #6b7280; font-weight: bold;\n    }\n    \n    /* 🏷️ BADGE ACQUITTÉE */\n    .badge-acquittee {\n      display: inline-block; background: #dcfce7;\n      color: #166534; padding: 6px 16px;\n      border-radius: 20px; font-size: 12px; font-weight: bold;\n      margin-top: 10px; border: 1px solid #bbf7d0;\n    }\n    \n    /* 👥 CLIENT INFO */\n    .client-info {\n      background: #f9fafb; padding: 20px;\n      border-radius: 8px; margin-bottom: 30px;\n      position: relative; z-index: 10;\n    }\n    .client-label {\n      font-size: 11px; text-transform: uppercase;\n      color: #6b7280; font-weight: bold; margin-bottom: 8px;\n    }\n    .client-name {\n      font-size: 16px; font-weight: bold; color: #111;\n      margin-bottom: 4px;\n    }\n    .client-address { font-size: 13px; color: #4b5563; }\n    \n    /* 📊 TABLEAU */\n    .items-table {\n      width: 100%; border-collapse: collapse;\n      margin-bottom: 30px; position: relative; z-index: 10;\n    }\n    .items-table th {\n      text-align: left; padding: 12px; font-size: 12px;\n      font-weight: bold; color: #374151; text-transform: uppercase;\n      border-bottom: 2px solid #e5e7eb; background: #f3f4f6;\n    }\n    .items-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }\n    \n    /* 💵 TOTAL */\n    .total-section { display: flex; justify-content: flex-end; margin-bottom: 30px; }\n    .total-box {\n      width: 300px; background: linear-gradient(135deg, #166534 0%, #14532d 100%);\n      color: white; padding: 20px; border-radius: 8px; text-align: center;\n    }\n    .total-amount { font-size: 36px; font-weight: bold; }\n    \n    /* ✅ CONFIRMATION PAIEMENT */\n    .confirmation-paiement {\n      background: #f0fdf4; border: 1px solid #bbf7d0;\n      padding: 20px; border-radius: 8px; text-align: center;\n      margin-bottom: 30px;\n    }\n    \n    /* 📄 FOOTER */\n    .footer {\n      text-align: center; font-size: 11px; color: #9ca3af;\n      border-top: 1px solid #e5e7eb; padding-top: 20px;\n      margin-top: 40px;\n    }\n  </style>\n</head>\n<body>\n  <!-- 🖌️ TAMPON RUSTIQUE ACQUITTÉE -->\n  <div class=\"rust-stamp\">ACQUITTÉE</div>\n\n  <!-- 📋 HEADER -->\n  <div class=\"header\">\n    <div class=\"logo-container\">\n      <img src=\"https://npyfregghvnmqxwgkfea.supabase.co/storage/v1/object/public/logo/logo_amicale.png\" \n           class=\"logo-img\" alt=\"Logo Amicale\">\n      <div class=\"org-info\">\n        <div class=\"org-title\">AMICALE DES SAPEURS-POMPIERS<br>DE CLERMONT-L'HÉRAULT</div>\n        <div class=\"org-details\">Centre de Secours<br>34800 Clermont-l'Hérault</div>\n      </div>\n    </div>\n    <div class=\"facture-info\">\n      <h1 class=\"facture-title\">FACTURE</h1>\n      <div class=\"facture-numero\">N° ${factureNumero}</div>\n      <span class=\"badge-acquittee\">✅ FACTURE ACQUITTÉE</span>\n    </div>\n  </div>\n\n  <!-- 👥 CLIENT -->\n  <div class=\"client-info\">\n    <div class=\"client-label\">Facturé à</div>\n    <div class=\"client-name\">${nomEntreprise}</div>\n    <div class=\"client-address\">\n      ${entreprise.adresse || ''}<br>\n      ${entreprise.cp || ''} ${entreprise.ville || ''}\n    </div>\n  </div>\n\n  <!-- ✅ CONFIRMATION PAIEMENT -->\n  <div class=\"confirmation-paiement\">\n    <strong style=\"color: #166534;\">Document valant reçu de paiement</strong><br>\n    Cette facture a été réglée en totalité le <strong>${formattedPaiement}</strong>.\n  </div>\n\n  <!-- 📊 DÉTAIL -->\n  <table class=\"items-table\">\n    <thead>\n      <tr>\n        <th>Désignation</th>\n        <th style=\"text-align: center;\">Qté</th>\n        <th style=\"text-align: right;\">Total HT</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr>\n        <td>\n          <strong>Encart publicitaire Calendrier 2026</strong><br>\n          <span style=\"color: #6b7280; font-size: 12px;\">\n            Format: ${formatEncart} • Parution: ${moisParution}\n          </span>\n        </td>\n        <td style=\"text-align: center;\">${nombreParutions}</td>\n        <td style=\"text-align: right;\">${montantTotal.toFixed(2)} €</td>\n      </tr>\n    </tbody>\n  </table>\n\n  <!-- 💵 TOTAL -->\n  <div class=\"total-section\">\n    <div class=\"total-box\">\n      <div style=\"font-size: 12px; opacity: 0.9;\">MONTANT ACQUITTÉ</div>\n      <div class=\"total-amount\">${montantTotal.toFixed(2)} €</div>\n    </div>\n  </div>\n\n  <!-- 📄 FOOTER -->\n  <div class=\"footer\">\n    Amicale des Sapeurs-Pompiers de Clermont-l'Hérault - Association Loi 1901<br>\n    TVA non applicable, art. 293 B du CGI<br>\n    Facture acquittée le ${formattedPaiement} - Réf: ${factureNumero}\n  </div>\n</body>\n</html>`;\n\n// 📤 Retour pour Gotenberg/Convert to File\nreturn { \n  html, \n  factureNumero,\n  entreprise,\n  qualification,\n  montantTotal,\n  formattedPaiement\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1264,
+        336
+      ],
+      "id": "54b08a27-7ae6-4f98-b58d-603202df9c32",
+      "name": "Build HTML Facture Acquite"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e3da6b9b-8698-4d2d-bb44-e58c4332bfc9",
+              "leftValue": false,
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1488,
+        464
+      ],
+      "id": "051b85cc-8c5b-459b-bebd-0a00aafb8cc5",
+      "name": "IF is_paid"
+    }
+  ],
+  "pinData": {
+    "Webhook Trigger": [
+      {
+        "json": {
+          "qualification_id": "fda00017-f19d-4ba4-a88b-f49e8ecdaae9",
+          "send_email": false
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Build HTML Facture Émise": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Binary": {
+      "main": [
+        [
+          {
+            "node": "Gotenberg: HTML to PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gotenberg: HTML to PDF": {
+      "main": [
+        [
+          {
+            "node": "Should Send Email?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload PDF Supabase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF Supabase Storage": {
+      "main": [
+        [
+          {
+            "node": "Extract Storage Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Send Email?": {
+      "main": [
+        [
+          {
+            "node": "Send Email with PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Validate Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch Qualification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Qualification": {
+      "main": [
+        [
+          {
+            "node": "Fetch Entreprise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Entreprise": {
+      "main": [
+        [
+          {
+            "node": "Get Facture Numero (RPC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Facture Numero": {
+      "main": [
+        [
+          {
+            "node": "Create Document (Generating)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Facture Numero (RPC)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Facture Numero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Update Document Table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Document (Generating)": {
+      "main": [
+        [
+          {
+            "node": "Update Qualification Status (Generating)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Document Table": {
+      "main": [
+        [
+          {
+            "node": "Update Qualification Status (Ready)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract & Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Storage Info": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Update Qualification Status (Generating)": {
+      "main": [
+        [
+          {
+            "node": "IF is_paid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Qualification Status (Ready)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email with PDF": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Facture Acquite": {
+      "main": [
+        [
+          {
+            "node": "Convert to Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF is_paid": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Facture Acquite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build HTML Facture Émise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "7a35dd99-edf5-4ef7-a685-3580623d5be6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ab184e9b85db7486a006de55f7b127638b3f5b96c6cde5edbc7605d54db0ecd"
+  },
+  "id": "D0Ck0NQn8gTwX3wM",
+  "tags": []
+}

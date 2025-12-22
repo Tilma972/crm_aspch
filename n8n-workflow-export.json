@@ -1,0 +1,322 @@
+{
+  "name": "Generate Facture Emise - ASPCH CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "generate-facture-emise",
+        "httpMethod": "POST"
+      },
+      "name": "Webhook - Receive Facture Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "generate-facture-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{\n  facture_status_label: $input.first().json.facture.status === 'emise' ? 'Émise' : 'Acquittée'\n}];"
+      },
+      "name": "Set Status Label",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const { qualification, entreprise, facture } = $input.all()[0].json;\n\nconst statusClass = facture.status === 'emise' ? 'status-emise' : 'status-acquittee';\nconst statusLabel = facture.status === 'emise' ? 'Émise' : 'Acquittée';\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: Arial, sans-serif; margin: 20px; color: #333; }\n    .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; }\n    .header h1 { margin: 0; color: #2c3e50; }\n    .facture-info { display: flex; justify-content: space-between; margin: 20px 0; }\n    .company-info { margin-bottom: 30px; }\n    .company-info h3 { margin: 0; color: #2c3e50; }\n    .company-info p { margin: 5px 0; }\n    .invoice-details { margin: 20px 0; background: #ecf0f1; padding: 15px; border-radius: 5px; }\n    .status-badge { \n      display: inline-block; \n      padding: 8px 15px; \n      border-radius: 3px;\n      font-weight: bold;\n      margin-top: 10px;\n    }\n    .status-emise { background-color: #3498db; color: white; }\n    .status-acquittee { background-color: #27ae60; color: white; }\n    table { width: 100%; border-collapse: collapse; margin: 30px 0; }\n    th { background-color: #2c3e50; color: white; padding: 12px; text-align: left; }\n    td { border-bottom: 1px solid #bdc3c7; padding: 12px; }\n    tr:last-child td { border: none; font-weight: bold; font-size: 1.1em; }\n    .footer { text-align: center; margin-top: 40px; color: #7f8c8d; font-size: 0.9em; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>FACTURE</h1>\n    <div class=\"facture-info\">\n      <div>\n        <p><strong>Numéro:</strong> ${facture.numero}</p>\n        <p><strong>Date:</strong> ${facture.date_emission}</p>\n      </div>\n      <div>\n        <span class=\"status-badge ${statusClass}\">${statusLabel}</span>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"company-info\">\n    <h3>${entreprise.nom}</h3>\n    <p>${entreprise.adresse}</p>\n    <p>${entreprise.cp} ${entreprise.ville}</p>\n    <p>Email: ${entreprise.email}</p>\n    ${entreprise.telephone ? `<p>Téléphone: ${entreprise.telephone}</p>` : ''}\n  </div>\n\n  <div class=\"invoice-details\">\n    <p><strong>Date d'émission:</strong> ${facture.date_emission}</p>\n    <p><strong>Date d'échéance:</strong> ${facture.date_echeance}</p>\n  </div>\n\n  <table>\n    <thead>\n      <tr>\n        <th>Description</th>\n        <th style=\"text-align: right; width: 150px;\">Montant</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr>\n        <td>${qualification.format_encart} - ${qualification.mois_parution}</td>\n        <td style=\"text-align: right;\">${qualification.prix_total.toFixed(2)} €</td>\n      </tr>\n      <tr>\n        <td style=\"text-align: right;\">TOTAL HT</td>\n        <td style=\"text-align: right;\">${qualification.prix_total.toFixed(2)} €</td>\n      </tr>\n      <tr>\n        <td style=\"text-align: right;\">TVA (20%)</td>\n        <td style=\"text-align: right;\">${(qualification.prix_total * 0.2).toFixed(2)} €</td>\n      </tr>\n      <tr>\n        <td style=\"text-align: right; font-size: 1.2em;\">TOTAL TTC</td>\n        <td style=\"text-align: right; font-size: 1.2em;\">${(qualification.prix_total * 1.2).toFixed(2)} €</td>\n      </tr>\n    </tbody>\n  </table>\n\n  <div class=\"footer\">\n    <p>Facture générée le ${new Date().toLocaleDateString('fr-FR')} par ASPCH</p>\n    <p>Conditions de paiement: ${qualification.mode_paiement}</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{ html }];"
+      },
+      "name": "Build HTML Template",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.GOTENBERG_URL || 'http://localhost:3000' }}/forms/chromium/convert/html",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParametersUi": "keyvaluepairs",
+        "bodyParameters": [
+          {
+            "name": "paperFormat",
+            "value": "A4"
+          },
+          {
+            "name": "marginTop",
+            "value": "10"
+          },
+          {
+            "name": "marginBottom",
+            "value": "10"
+          },
+          {
+            "name": "marginLeft",
+            "value": "10"
+          },
+          {
+            "name": "marginRight",
+            "value": "10"
+          }
+        ],
+        "useMultipart": true,
+        "multipartParameters": [
+          {
+            "name": "files",
+            "value": "={{ Buffer.from($input.all()[0].json.html).toString('base64') }}",
+            "parameterType": "formData"
+          }
+        ]
+      },
+      "name": "Convert HTML to PDF (Gotenberg)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "supabaseConnection": "={{ $credentials.supabase }}",
+        "bucket": "factures",
+        "path": "={{ $input.all()[0].json.qualification.entreprise_id }}/{{ $input.all()[0].json.facture.numero }}",
+        "dataPropertyName": "data",
+        "fileName": "facture.pdf",
+        "mimeType": "application/pdf"
+      },
+      "name": "Upload PDF to Supabase Storage",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "executeQuery",
+        "supabaseConnection": "={{ $credentials.supabase }}",
+        "query": "UPDATE qualification SET facture_status = 'ready', facture_numero = '{{ $input.all()[0].json.facture.numero }}', facture_url = '{{ $input.all()[1].json.fileUrl }}', facture_generated_at = NOW(), facture_error = NULL WHERE id = '{{ $input.all()[0].json.qualification.id }}'"
+      },
+      "name": "Update Qualification Status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "database",
+        "operation": "insert",
+        "supabaseConnection": "={{ $credentials.supabase }}",
+        "table": "document",
+        "columns": "type, qualification_id, entreprise_id, numero, url, status, created_by, created_at",
+        "values": "='facture', '{{ $input.all()[0].json.qualification.id }}', '{{ $input.all()[0].json.qualification.entreprise_id }}', '{{ $input.all()[0].json.facture.numero }}', '{{ $input.all()[1].json.fileUrl }}', '{{ $input.all()[0].json.facture.status }}', '{{ $input.all()[0].json.qualification.generated_by_user }}', NOW()"
+      },
+      "name": "Create Document Record",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 2,
+      "position": [1250, 450]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": [
+            {
+              "condition": "=",
+              "leftValue": "={{ $input.all()[0].json.qualification.send_email }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "name": "IF Send Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "{{ $env.SMTP_FROM_EMAIL || 'factures@aspch.fr' }}",
+        "toEmail": "={{ $input.all()[0].json.entreprise.email }}",
+        "subject": "Facture {{ $input.all()[0].json.facture.numero }} - {{ $input.all()[0].json.facture.status === 'emise' ? 'Émise' : 'Acquittée' }}",
+        "textMessage": "Bonjour {{ $input.all()[0].json.entreprise.nom }},\n\nVotre facture {{ $input.all()[0].json.facture.numero }} a été générée.\n\nMontant: {{ $input.all()[0].json.qualification.prix_total }} €\nDate: {{ $input.all()[0].json.facture.date_emission }}\nStatut: {{ $input.all()[0].json.facture.status === 'emise' ? 'Émise' : 'Acquittée' }}\n\nCordialement,\nASPCH"
+      },
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.emailSendNode",
+      "typeVersion": 1,
+      "position": [1550, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": [
+            {
+              "condition": "=",
+              "leftValue": "={{ $input.all()[0].json.qualification.send_telegram }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "name": "IF Send Telegram",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 450]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "📄 Facture générée\nNuméro: {{ $input.all()[0].json.facture.numero }}\nEntreprise: {{ $input.all()[0].json.entreprise.nom }}\nMontant: {{ $input.all()[0].json.qualification.prix_total }} €\nStatut: {{ $input.all()[0].json.facture.status === 'emise' ? 'Émise' : 'Acquittée' }}"
+      },
+      "name": "Send Telegram Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1550, 450]
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseData": "{{ JSON.stringify({\n  success: true,\n  message: 'Facture générée avec succès',\n  facture_numero: $input.all()[0].json.facture.numero,\n  timestamp: new Date().toISOString()\n}) }}"
+      },
+      "name": "Return Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1700, 300]
+    },
+    {
+      "parameters": {
+        "responseCode": 500,
+        "responseData": "{{ JSON.stringify({\n  success: false,\n  message: $input.all()[0].json.message || 'Erreur lors de la génération de la facture',\n  error: $input.all()[0].json.error || 'Unknown error'\n}) }}"
+      },
+      "name": "Return Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1700, 450]
+    }
+  ],
+  "connections": {
+    "Webhook - Receive Facture Request": {
+      "main": [
+        [
+          {
+            "node": "Set Status Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Status Label": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Template": {
+      "main": [
+        [
+          {
+            "node": "Convert HTML to PDF (Gotenberg)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert HTML to PDF (Gotenberg)": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to Supabase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF to Supabase Storage": {
+      "main": [
+        [
+          {
+            "node": "Update Qualification Status",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Document Record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Send Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Qualification Status": {
+      "main": [
+        [
+          {
+            "node": "Return Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Send Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Notification": {
+      "main": [
+        [
+          {
+            "node": "Return Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Send Telegram": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Return Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
