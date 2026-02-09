@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/qualifications/[id]/facture
@@ -18,7 +18,7 @@ export async function POST(
   try {
     const { id: qualificationId } = await params;
 
-    // 1. Vérifier authentification
+    // 1. Vérifier authentification (avec client normal)
     const supabase = await createClient();
     const {
       data: { user },
@@ -35,6 +35,9 @@ export async function POST(
         { status: 401 }
       );
     }
+
+    // Utiliser le client admin pour les opérations DB afin de contourner RLS
+    const adminSupabase = await createAdminClient();
 
     // 2. Parser le body
     let body: Record<string, unknown>;
@@ -54,14 +57,15 @@ export async function POST(
     // 3. Paramètres optionnels
     const sendEmail = (body.sendEmail !== undefined) ? !!body.sendEmail : false;
 
-    // 4. Vérifier que la qualification existe
-    const { data: qualification, error: qualError } = await supabase
+    // 4. Vérifier que la qualification existe (avec client admin)
+    const { data: qualification, error: qualError } = await adminSupabase
       .from('qualification')
       .select('id, entreprise_id, date_paiement, reference_paiement')
       .eq('id', qualificationId)
       .single();
 
     if (qualError || !qualification) {
+      console.error('Qualification fetch error:', qualError);
       return NextResponse.json(
         {
           success: false,
@@ -95,7 +99,7 @@ export async function POST(
       }
 
       if (Object.keys(updateData).length > 0) {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await adminSupabase
           .from('qualification')
           .update(updateData)
           .eq('id', qualificationId);

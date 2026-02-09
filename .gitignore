@@ -48,6 +48,9 @@ next-env.d.ts
 /supabase/.temp/
 
 # python analysis scripts (deprecated)
+
+# Claude Code (secrets)
+.claude/secrets/
 *.py
 analysis_output.txt
 sample_row.txt

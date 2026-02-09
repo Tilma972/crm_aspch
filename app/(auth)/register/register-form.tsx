@@ -57,9 +57,7 @@ export default function RegisterForm() {
       const response = await signup(values);
 
       if (response.error) {
-        toast.error(
-          "Une erreur s&apos;est produite. Veuillez réessayer plus tard."
-        );
+        toast.error(response.error);
         return;
       }
 

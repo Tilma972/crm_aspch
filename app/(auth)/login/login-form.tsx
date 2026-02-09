@@ -50,7 +50,9 @@ export default function LoginForm() {
       const response = await login(values);
 
       if (response.error) {
-        toast.error("Erreur lors de la connexion. Vérifiez vos identifiants.");
+        toast.error(response.error === "Invalid login credentials" 
+          ? "Email ou mot de passe incorrect." 
+          : response.error);
         return;
       }
 

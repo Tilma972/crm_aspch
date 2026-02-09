@@ -1,236 +1,262 @@
-# Next.js 15 Starter with Supabase, React Query
+# CRM ASPCH - Gestion des Partenariats Publicitaires
 
-A modern Next.js 15 starter template with Supabase authentication, React Query for data fetching, and built-in wrappers for queries and authentication. This starter is designed to accelerate development by providing preconfigured hooks, utilities, and best practices.
+[![Built with Next.js](https://img.shields.io/badge/Next.js-15.1.6-black?style=flat-square)](https://nextjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green?style=flat-square)](https://supabase.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?style=flat-square)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-## 🚀 Features
+## 🎯 À propos
 
-- **Next.js 15** – The latest Next.js version for optimized performance.
-- **Supabase Authentication** – Built-in auth system with user session handling.
-- **React Query** – Efficient data fetching and caching.
-- **ShadCN Components** – Prebuilt UI components for faster development.
-- **Tailwind CSS** – Utility-first styling for rapid UI building.
-- **Zod Validation** – Schema-based form validation for better data handling.
-- **Prebuilt Hooks** – Hooks for fetching data and mutations in client components.
-- **Query & Auth Wrappers** – Easily manage authentication state and query handling.
+**CRM ASPCH** est une plateforme web moderne conçue pour orchestrer et gérer le cycle complet des partenariats publicitaires du Calendrier 2026 des Sapeurs-Pompiers de Clermont-l'Hérault.
 
-## 📦 Installation
+### Problématique résolue
+- ✅ Interface utilisateur limitée à Telegram uniquement → **Dashboard web complet**
+- ✅ Pas de vue d'ensemble → **Tableaux de bord & analytics**
+- ✅ Lenteur des actions → **Next.js optimisé + Supabase Realtime**
+- ✅ Pas de reporting → **Statistiques et suivi en temps réel**
+- ✅ Limitation mobile → **Responsive design (Desktop, Tablet, Mobile)**
 
-Create a new project using the CLI (if available):
+## 🏗️ Architecture
 
-```sh
-npx create-next-supabase-starter@latest my-project
+### Séparation des responsabilités
+
+```
+┌─────────────────────────────────────────┐
+│  CRM (Next.js + Supabase)               │
+│  • Interface utilisateur                 │
+│  • CRUD Entreprises/Qualifications      │
+│  • Dashboard & Analytics                │
+│  • Orchestration workflows n8n          │
+└─────────────────────────────────────────┘
+              ↓ Webhooks
+┌─────────────────────────────────────────┐
+│  n8n (Workflows)                        │
+│  • Génération BC/Factures/BAT (PDF)     │
+│  • IA Email (Claude/Gemini)             │
+│  • Envoi Emails (Gmail API)             │
+│  • Update Supabase (résultats)          │
+└─────────────────────────────────────────┘
 ```
 
-Or manually clone the repository:
+## 🚀 Démarrage rapide
 
-```sh
-git clone https://github.com/your-username/your-repo.git my-project
-cd my-project
+### Prérequis
+- **Node.js** 18+ (recommandé 20 LTS)
+- **pnpm** (package manager)
+- **Supabase CLI** (optionnel)
+
+### Installation
+
+```bash
+# 1. Cloner le dépôt
+git clone https://github.com/Tilma972/crm_aspch.git
+cd crm_aspch
+
+# 2. Installer les dépendances
 pnpm install
+
+# 3. Configuration des variables d'environnement
+# Créer un fichier .env.local avec:
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 ```
 
-## 🛠 Setup
+### Développement
 
-### 1. Environment Variables
-
-Create a `.env.local` file and add:
-
-```sh
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### 2. Run Development Server
-
-```sh
+```bash
+# Lancer le serveur de développement
 pnpm dev
+
+# Ouvrir http://localhost:3000
 ```
 
-Your app should be running at [http://localhost:3000](http://localhost:3000).
+### Build & Production
 
-## 📌 Usage
+```bash
+# Compiler l'application
+pnpm build
 
-### 🏗 Authentication
-
-The `AuthContext` ensures user authentication is managed across the app.
-
-```tsx
-"use client";
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["user"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getUser();
-      return data?.user ?? null; // ✅ Ensures it's never undefined
-    },
-    staleTime: 0,
-  });
-
-  return (
-    <AuthContext.Provider value={{ user: user ?? null, loading: isLoading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
+# Démarrer le serveur de production
+pnpm start
 ```
 
-### 🔄 Fetching Data
+## 📋 Stack technique
 
-Use the `useClientFetch` hook for fetching data efficiently on client components:
+### Frontend
+- **Next.js 15.1.6** - React framework avec App Router
+- **React 19** - Bibliothèque UI
+- **TypeScript 5** - Typage statique
+- **Tailwind CSS 3.4** - Framework CSS utilitaire
+- **shadcn/ui** - Composants accessibles pré-stylisés
+- **React Hook Form** - Gestion des formulaires
+- **Zod** - Validation de schémas TypeScript
+- **TanStack Query 5** - Gestion du state asynchrone
+- **next-themes** - Gestion du thème (light/dark)
 
-```tsx
-import { useClientFetch } from "@/hooks/useClientFetch";
+### Backend
+- **Supabase** - PostgreSQL + Auth + Realtime
+- **Supabase SSR** - Authentification côté serveur
+- **Webhooks** - Communication avec n8n
 
-const Posts = () => {
-  const { data, isLoading } = useClientFetch("posts", "posts");
+### Intégrations
+- **n8n** - Orchestration de workflows
+- **Gmail API** - Envoi d'emails
+- **Google Drive** - Stockage de documents
+- **Claude/Gemini** - IA pour génération de contenu
 
-  if (isLoading) return <p>Loading...</p>;
-
-  return (
-    <ul>
-      {data?.map((post) => (
-        <li key={post.id}>{post.name}</li>
-      ))}
-    </ul>
-  );
-};
-```
-
-#### Advanced Filtering Example
-
-```tsx
-const FilteredUsers = () => {
-  const { data, isLoading } = useClientFetch(
-    "filtered-users", // key
-    "users", // table name
-    5000, // cache time
-    (query) => query.eq("role", "admin") // Supabase query filter
-  );
-
-  if (isLoading) return <p>Loading...</p>;
-
-  return (
-    <ul>
-      {data?.map((user) => (
-        <li key={user.id}>
-          {user.name} ({user.role})
-        </li>
-      ))}
-    </ul>
-  );
-};
-```
-
-### 📮 Mutations
-
-Use the `useClientMutate` hook for inserting, updating, and deleting data on client components:
-
-```tsx
-import { useClientMutate } from "@/hooks/useClientMutate";
-
-const AddPost = () => {
-  const mutation = useClientMutate("posts", "insert");
-
-  const handleSubmit = async () => {
-    mutation.mutate({ id: Date.now(), name: "New Post" });
-  };
-
-  return <button onClick={handleSubmit}>Add Post</button>;
-};
-```
-
-#### Updating Data Example
-
-```tsx
-const UpdatePost = () => {
-  const mutation = useClientMutate("posts", "update");
-
-  const handleUpdate = () => {
-    mutation.mutate({ id: 1, name: "Updated Post" });
-  };
-
-  return <button onClick={handleUpdate}>Update User</button>;
-};
-```
-
-#### Deleting Data Example
-
-```tsx
-const DeleteUser = () => {
-  const mutation = useClientMutate("users", "delete");
-
-  const handleDelete = () => {
-    mutation.mutate({ id: 1 });
-  };
-
-  return <button onClick={handleDelete}>Delete User</button>;
-};
-```
-
-## 🏗 Folder Structure
+## 📁 Structure du projet
 
 ```
-📦 my-project
-├── 📂 app                 # Next.js app directory
-│   ├── 📂 (auth)           # Authentication pages
-│   │   ├── 📂 auth         # Authentication utilities
-│   │   │   ├── 📂 confirm  # Confirmation route
-│   │   │   │   └── route.ts
-│   │   ├── 📂 error        # Error handling
-│   │   ├── 📂 login        # Login page
-│   │   ├── 📂 register     # Register page
-│   │   ├── actions.ts      # Auth actions
-│   │   └── layout.tsx      # Auth layout
-│   ├── 📂 (dashboard)      # Dashboard pages
-│   ├── favicon.ico         # Favicon
-│   ├── globals.css         # Global styles
-│   ├── layout.tsx          # Main layout
-│   ├── not-found.tsx       # 404 Page
-│   └── page.tsx            # Home page
-├── 📂 components          # Shared UI components
-├── 📂 hooks               # Custom React Query hooks
-├    └── use-client-fetch.ts
-├    └── use-client-mutation.ts
-├── 📂 lib                 # Utilities & helpers
-├── 📂 public              # Static assets
-├── 📂 supabase            # Supabase integrations clients
-│   ├── client.ts          # Supabase client
-│   ├── middleware.ts      # Middleware configuration
-│   └── server.ts          # Server-side Supabase utilities
-├── 📂 node_modules        # Dependencies
-├── .env                   # Environment configuration
-├── .env.example           # Example environment variables
-├── .gitignore             # Git ignore file
-├── components.json        # UI component configurations
-├── eslint.config.mjs      # ESLint configuration
-├── middleware.ts          # Global middleware
-├── next-env.d.ts          # Next.js environment types
-├── next.config.ts         # Next.js configuration
-├── package.json           # Project dependencies
-├── pnpm-lock.yaml         # Lock file
-├── postcss.config.mjs     # PostCSS configuration
-├── README.md              # Project documentation
-├── tailwind.config.ts     # Tailwind CSS configuration
-└── tsconfig.json          # TypeScript configuration
+crm_aspch/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Pages d'authentification
+│   │   ├── login/
+│   │   ├── register/
+│   │   └── error/
+│   ├── (dashboard)/              # Pages protégées
+│   │   ├── entreprises/          # Gestion des entreprises
+│   │   └── qualifications/       # Gestion des qualifications
+│   ├── api/
+│   │   ├── webhooks/             # Réception des webhooks n8n
+│   │   └── qualifications/       # API pour qualifications
+│   └── layout.tsx
+├── components/                   # Composants React réutilisables
+│   ├── entreprises/              # Composants métier
+│   ├── layout/                   # Composants layout (nav, sidebar)
+│   └── ui/                       # Composants UI génériques
+├── lib/
+│   ├── auth-context.tsx          # Contexte d'authentification
+│   ├── supabase/                 # Clients Supabase
+│   ├── schemas/                  # Schémas Zod
+│   └── utils.ts                  # Utilitaires
+├── hooks/                        # Custom React hooks
+├── supabase/
+│   └── migrations/               # Migrations Supabase
+├── docs/                         # Documentation technique
+└── scripts/                      # Scripts utilitaires
 ```
 
-## 🛠 Technologies I Used
+## 🔐 Authentification
 
-- **Next.js 15**
-- **Supabase**
-- **React Query**
-- **ShadCN Components**
-- **Tailwind CSS**
-- **Zod Validation**
-- **TypeScript**
+- **Supabase Auth** avec JWT
+- Support OAuth (Google, GitHub)
+- Middleware de protection des routes
+- Gestion des sessions côté serveur
+
+## 💾 Base de données
+
+**Tables principales:**
+- `enterprises` - Entreprises partenaires
+- `qualifications` - Qualifications commerciales
+- `invoices` - Factures générées
+- `orders` - Bons de commande
+- `audit_logs` - Historique des actions
+
+## 📊 Fonctionnalités principales
+
+### 1. **Gestion des Entreprises**
+- ✅ Créer, lire, modifier, supprimer (CRUD)
+- ✅ Tableau avec filtrage & tri
+- ✅ Timeline des interactions
+- ✅ Import/export de données
+
+### 2. **Gestion des Qualifications**
+- ✅ Attribution de qualifications aux entreprises
+- ✅ Historique des changements
+- ✅ Validation des critères
+
+### 3. **Génération de Documents**
+- ✅ Bons de commande (PDF)
+- ✅ Factures (PDF)
+- ✅ Bons à tirer (PDF)
+- ✅ Intégration avec Google Drive
+
+### 4. **Emails intelligents**
+- ✅ Génération d'emails avec IA (Claude)
+- ✅ Prévisualisation avant envoi
+- ✅ Envoi via Gmail API
+- ✅ Templates personnalisables
+
+### 5. **Dashboard & Reporting**
+- ✅ Statistiques en temps réel
+- ✅ Graphiques et tableaux
+- ✅ Exports de données
+
+## 🔗 Webhooks n8n
+
+L'application communique avec les workflows n8n via des webhooks HTTP:
+
+```
+POST /api/webhooks/generate-invoice
+POST /api/webhooks/send-email
+POST /api/webhooks/generate-document
+```
+
+## 🛠️ Scripts disponibles
+
+```bash
+pnpm dev              # Développement avec hot reload
+pnpm build            # Build pour production
+pnpm start            # Démarrer serveur production
+pnpm lint             # Linter le code
+pnpm supabase         # CLI Supabase
+
+# Migrations Supabase (Windows PowerShell)
+pnpm exec supabase db push        # Appliquer toutes les migrations
+pnpm exec supabase db status      # Vérifier le statut
+```
+
+## 📚 Documentation
+
+- [Architecture Technique](architecture-technique.md) - Schéma détaillé de l'infrastructure
+- [Objectifs & Périmètre](objectif-app-aspch.md) - Vision et scope du projet
+- [Guide Développeur](DEVELOPER.md) - Instructions pour développeurs
+- [Design System](ASPCH_DESIGN_SYSTEM.md) - Conventions UI/UX
+
+## 🚨 Variables d'environnement
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+
+# n8n
+N8N_WEBHOOK_URL=https://n8n.example.com/webhook/
+
+# APIs externes
+GMAIL_API_KEY=<key>
+GEMINI_API_KEY=<key>
+```
+
+## 🤝 Contribution
+
+Les contributions sont bienvenues ! Veuillez :
+1. Fork le dépôt
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit vos changements (`git commit -m 'Add AmazingFeature'`)
+4. Push la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+## 📝 Licence
+
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 👥 Contact & Support
+
+- **Organisation** : Sapeurs-Pompiers de Clermont-l'Hérault
+- **Repository** : https://github.com/Tilma972/crm_aspch
+- **Issues** : [GitHub Issues](https://github.com/Tilma972/crm_aspch/issues)
+
+## 📈 Roadmap
+
+- [ ] Phase 4 - Intégration complète n8n
+- [ ] Dashboard d'analytics avancées
+- [ ] Intégration Salesforce/HubSpot
+- [ ] Mobile app native
+- [ ] API GraphQL
+
+---
+
+**Dernière mise à jour:** Février 2026
